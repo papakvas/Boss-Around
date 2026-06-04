@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="el" data-theme="system">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <title>Boss Around</title>
+  <meta name="description" content="Απλή ανάθεση και παρακολούθηση εργασιών για επιχειρήσεις." />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#FAF7F2" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#16181d" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <!-- Fonts (Greek-capable) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Apply saved theme before paint to avoid a flash -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('ba_theme') || 'system';
+        var dark = t === 'dark' || (t === 'system' &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div id="app" aria-live="polite"></div>
+  <div id="toast-root" aria-live="assertive"></div>
+
+  <!-- Supabase JS client (v2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js" defer></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () {});
+      });
+    }
+  </script>
+</body>
+</html>
