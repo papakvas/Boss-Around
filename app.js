@@ -41,6 +41,7 @@
       'f.all': 'Όλες', 'f.pending': 'Εκκρεμείς', 'f.in_progress': 'Σε εξέλιξη',
       'f.on_hold': 'Σε αναμονή', 'f.completed': 'Ολοκληρωμένες', 'f.starred': 'Με αστέρι',
       assignedTo: 'Ανατέθηκε σε', unassigned: 'Χωρίς ανάθεση', noDue: 'Χωρίς προθεσμία',
+      allAssignees: 'Όλοι οι υπεύθυνοι',
       emptyTasksBossTitle: 'Δεν υπάρχουν εργασίες ακόμη',
       emptyTasksBossSub: 'Πατήστε + για να αναθέσετε την πρώτη εργασία στην ομάδα σας.',
       emptyTasksEmpTitle: 'Καμία εργασία',
@@ -133,6 +134,7 @@
       'f.all': 'All', 'f.pending': 'Pending', 'f.in_progress': 'In progress',
       'f.on_hold': 'On hold', 'f.completed': 'Completed', 'f.starred': 'Starred',
       assignedTo: 'Assigned to', unassigned: 'Unassigned', noDue: 'No due date',
+      allAssignees: 'All assignees',
       emptyTasksBossTitle: 'No tasks yet',
       emptyTasksBossSub: 'Tap + to assign the first task to your team.',
       emptyTasksEmpTitle: 'No tasks',
@@ -200,7 +202,7 @@
   const state = {
     ready: false, session: null, me: null, org: null,
     members: [], tasks: [], notifications: [], invites: [], myInvites: [],
-    view: 'tasks', scope: 'mine', filter: 'all',
+    view: 'tasks', scope: 'mine', filter: 'all', assignee: 'all',
     authMode: 'signin', lang: 'el', busy: false
   };
 
@@ -733,6 +735,10 @@
   function filteredTasks() {
     let list = state.tasks.slice();
     if (state.scope === 'mine') list = list.filter((t0) => t0.assigned_to === state.me.id);
+    else if (state.assignee && state.assignee !== 'all') {
+      if (state.assignee === 'unassigned') list = list.filter((t0) => !t0.assigned_to);
+      else list = list.filter((t0) => t0.assigned_to === state.assignee);
+    }
     if (state.filter === 'starred') list = list.filter((t0) => t0.starred);
     else if (state.filter !== 'all') list = list.filter((t0) => t0.status === state.filter);
     // sort: starred first, then overdue, then by status priority, then created
@@ -745,7 +751,7 @@
   }
 
   function viewTasks() {
-    const tasks = filteredTasks();
+    const list = filteredTasks();
     const filters = ['all', 'pending', 'in_progress', 'on_hold', 'completed', 'starred'];
     let html = '<div class="screen">';
 
@@ -758,16 +764,41 @@
       '<button class="fchip' + (state.filter === f ? ' active' : '') + '" data-act="filter" data-val="' + f + '">' +
       esc(t('f.' + f)) + '</button>').join('') + '</div>';
 
-    if (!tasks.length) {
+    // assignee filter — only meaningful when viewing everyone's board
+    if (state.scope === 'all') {
+      html += '<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px">' +
+        '<span style="color:var(--text-3);display:flex;flex:0 0 auto">' + I.users + '</span>' +
+        '<select class="select" data-change="assignee" style="flex:1">' +
+        '<option value="all">' + esc(t('allAssignees')) + '</option>' +
+        state.members.map((m) => '<option value="' + m.id + '"' + (state.assignee === m.id ? ' selected' : '') + '>' +
+          esc(displayName(m)) + (m.role === 'boss' ? ' (' + t('bossTag') + ')' : '') + '</option>').join('') +
+        '<option value="unassigned"' + (state.assignee === 'unassigned' ? ' selected' : '') + '>' + esc(t('unassigned')) + '</option>' +
+        '</select></div>';
+    }
+
+    const scopeHasAny = state.scope === 'mine'
+      ? state.tasks.some((x) => x.assigned_to === state.me.id)
+      : state.tasks.length > 0;
+
+    if (!list.length) {
       const boss = state.me.role === 'boss';
-      let title, sub;
-      if (state.filter !== 'all' || state.scope === 'mine') {
-        if (state.scope === 'mine' && state.filter === 'all') { title = boss ? t('emptyTasksBossTitle') : t('emptyTasksEmpTitle'); sub = boss ? t('emptyTasksBossSub') : t('emptyTasksEmpSub'); }
-        else { title = t('emptyFilterTitle'); sub = t('emptyFilterSub'); }
-      } else { title = boss ? t('emptyTasksBossTitle') : t('emptyTasksEmpTitle'); sub = boss ? t('emptyTasksBossSub') : t('emptyTasksEmpSub'); }
-      html += emptyState(I.checks, title, sub);
+      if (!scopeHasAny) html += emptyState(I.checks, boss ? t('emptyTasksBossTitle') : t('emptyTasksEmpTitle'),
+        boss ? t('emptyTasksBossSub') : t('emptyTasksEmpSub'));
+      else html += emptyState(I.checks, t('emptyFilterTitle'), t('emptyFilterSub'));
+    } else if (state.filter === 'all' || state.filter === 'starred') {
+      // group into sections by status (category)
+      const order = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'];
+      const groups = {};
+      list.forEach((tk) => { (groups[tk.status] = groups[tk.status] || []).push(tk); });
+      const present = order.filter((s) => groups[s]);
+      html += present.map((s, idx) =>
+        '<div class="spread" style="align-items:center;margin:' + (idx === 0 ? '4px' : '22px') + ' 4px 8px">' +
+        '<span class="chip ' + s + '">' + statusDot + esc(t('status.' + s)) + '</span>' +
+        '<span class="muted" style="font-weight:800;font-size:13px">' + groups[s].length + '</span></div>' +
+        '<div class="stack">' + groups[s].map((tk, i) => taskCard(tk, i)).join('') + '</div>'
+      ).join('');
     } else {
-      html += '<div class="stack">' + tasks.map((task, i) => taskCard(task, i)).join('') + '</div>';
+      html += '<div class="stack">' + list.map((tk, i) => taskCard(tk, i)).join('') + '</div>';
     }
     return html + '</div>';
   }
@@ -934,7 +965,9 @@
   function msgHtml(c) {
     const mine = c.user_id === state.me.id;
     const p = profileById(c.user_id);
-    return '<div class="msg' + (mine ? ' me' : '') + '">' +
+    const pending = String(c.id).indexOf('tmp-') === 0;
+    return '<div class="msg' + (mine ? ' me' : '') + '" data-cid="' + esc(c.id) + '" data-uid="' + esc(c.user_id) +
+      '" data-content="' + esc(c.content) + '"' + (pending ? ' data-pending="1"' : '') + '>' +
       '<div class="bubble">' + esc(c.content) + '</div>' +
       '<div class="meta">' + esc(mine ? t('you') : displayName(p)) + ' · ' + esc(relTime(c.created_at)) + '</div></div>';
   }
@@ -942,11 +975,17 @@
   function appendMessage(c) {
     const box = $('#chat-box'); if (!box) return;
     const empty = box.querySelector('.chat-empty'); if (empty) box.innerHTML = '';
+    // already shown by id?
     if (box.querySelector('[data-cid="' + c.id + '"]')) return;
+    // reconcile: a real row arriving for a message we already showed optimistically
+    if (String(c.id).indexOf('tmp-') !== 0) {
+      const pend = Array.prototype.slice.call(box.querySelectorAll('.msg[data-pending="1"]'))
+        .find((n) => n.getAttribute('data-uid') === c.user_id && n.getAttribute('data-content') === c.content);
+      if (pend) { pend.setAttribute('data-cid', c.id); pend.removeAttribute('data-pending'); return; }
+    }
     const wrap = document.createElement('div');
     wrap.innerHTML = msgHtml(c);
-    const node = wrap.firstElementChild; node.setAttribute('data-cid', c.id);
-    box.appendChild(node);
+    box.appendChild(wrap.firstElementChild);
     box.scrollTop = box.scrollHeight;
   }
 
@@ -1406,6 +1445,7 @@
       case 'theme:set': setTheme(el.value); break;
       case 'lang:set': setLang(el.value); break;
       case 'task:status': setStatus(id, el.value); break;
+      case 'assignee': state.assignee = el.value; renderView(); break;
       case 'notify:toggle': toggleNotify(el.checked); break;
     }
   });
@@ -1477,7 +1517,8 @@
       state, DICT, t,
       setState: (p) => Object.assign(state, p),
       renderConfigMissing, renderAuth, renderOnboarding, renderApp, renderView,
-      viewTasks, viewNotifications, viewSettings, openTaskForm, renderTaskSheet, taskCard
+      viewTasks, viewNotifications, viewSettings, openTaskForm, renderTaskSheet, taskCard,
+      filteredTasks, appendMessage, msgHtml, renderChat
     };
   }
 
