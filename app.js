@@ -36,7 +36,11 @@
       invitesTitle: 'Προσκλήσεις για εσάς', invitedToJoin: 'Πρόσκληση από', acceptInvite: 'Αποδοχή',
       invalidCode: 'Μη έγκυρος κωδικός. Ελέγξτε τον και δοκιμάστε ξανά.',
 
-      navTasks: 'Εργασίες', navNotif: 'Ειδοποιήσεις', navSettings: 'Ρυθμίσεις',
+      navTasks: 'Εργασίες', navNotif: 'Ειδοποιήσεις', navSettings: 'Ρυθμίσεις', navCalendar: 'Ημερολόγιο',
+      today: 'Σήμερα', noTasksDay: 'Καμία εργασία για αυτή την ημέρα',
+      dateFilter: 'Ημερομηνία', dateFilterTitle: 'Φίλτρο ημερομηνίας',
+      presetToday: 'Σήμερα', presetWeek: 'Αυτή την εβδομάδα', presetMonth: 'Αυτόν τον μήνα',
+      fromLabel: 'Από', toLabel: 'Έως', apply: 'Εφαρμογή', clear: 'Καθαρισμός',
       tabMine: 'Δικές μου', tabAll: 'Όλες',
       'f.all': 'Όλες', 'f.pending': 'Εκκρεμείς', 'f.in_progress': 'Σε εξέλιξη',
       'f.on_hold': 'Σε αναμονή', 'f.completed': 'Ολοκληρωμένες', 'f.cancelled': 'Ακυρωμένες', 'f.starred': 'Με αστέρι',
@@ -58,6 +62,8 @@
       titleLabel: 'Τίτλος', titlePlaceholder: 'Τι πρέπει να γίνει;',
       descLabel: 'Περιγραφή', descPlaceholder: 'Προσθέστε λεπτομέρειες (προαιρετικό)',
       assigneeLabel: 'Ανάθεση σε', dueLabel: 'Προθεσμία', statusLabel: 'Κατάσταση',
+      assigneesLabel: 'Υπεύθυνοι', extraAssigneesLabel: 'Επιπλέον υπεύθυνοι',
+      primaryTag: 'κύριος', noOtherMembers: 'Δεν υπάρχουν άλλα μέλη στην ομάδα.',
       createTaskBtn: 'Δημιουργία εργασίας', saveChanges: 'Αποθήκευση αλλαγών',
       deleteTask: 'Διαγραφή εργασίας', deleteTaskConfirm: 'Να διαγραφεί αυτή η εργασία; Η ενέργεια δεν αναιρείται.',
       titleRequired: 'Ο τίτλος είναι υποχρεωτικός.',
@@ -130,7 +136,11 @@
       invitesTitle: 'Invites for you', invitedToJoin: 'Invited by', acceptInvite: 'Accept',
       invalidCode: 'Invalid code. Check it and try again.',
 
-      navTasks: 'Tasks', navNotif: 'Alerts', navSettings: 'Settings',
+      navTasks: 'Tasks', navNotif: 'Alerts', navSettings: 'Settings', navCalendar: 'Calendar',
+      today: 'Today', noTasksDay: 'No tasks for this day',
+      dateFilter: 'Date', dateFilterTitle: 'Filter by date',
+      presetToday: 'Today', presetWeek: 'This week', presetMonth: 'This month',
+      fromLabel: 'From', toLabel: 'To', apply: 'Apply', clear: 'Clear',
       tabMine: 'Mine', tabAll: 'All',
       'f.all': 'All', 'f.pending': 'Pending', 'f.in_progress': 'In progress',
       'f.on_hold': 'On hold', 'f.completed': 'Completed', 'f.cancelled': 'Cancelled', 'f.starred': 'Starred',
@@ -152,6 +162,8 @@
       titleLabel: 'Title', titlePlaceholder: 'What needs to be done?',
       descLabel: 'Description', descPlaceholder: 'Add details (optional)',
       assigneeLabel: 'Assign to', dueLabel: 'Due date', statusLabel: 'Status',
+      assigneesLabel: 'Assignees', extraAssigneesLabel: 'Additional assignees',
+      primaryTag: 'main', noOtherMembers: 'No other team members yet.',
       createTaskBtn: 'Create task', saveChanges: 'Save changes',
       deleteTask: 'Delete task', deleteTaskConfirm: 'Delete this task? This cannot be undone.',
       titleRequired: 'Title is required.',
@@ -205,6 +217,7 @@
     ready: false, session: null, me: null, org: null,
     members: [], tasks: [], notifications: [], invites: [], myInvites: [],
     view: 'tasks', scope: 'mine', statuses: [], starredOnly: false, assignee: 'all', collapsed: {}, armedTaskId: null,
+    calMonth: null, calSelected: null, dateFrom: null, dateTo: null, taskAssignees: {},
     authMode: 'signin', lang: 'el', busy: false
   };
 
@@ -248,6 +261,21 @@
     return state.members.find((m) => m.id === id) || null;
   }
   const displayName = (p) => p ? ((p.full_name || '').trim() || (p.email || '').split('@')[0]) : '—';
+
+  // all assignees of a task = primary (assigned_to) + additional (task_assignees)
+  function taskAssigneeIds(task) {
+    const ids = [];
+    if (task.assigned_to) ids.push(task.assigned_to);
+    (state.taskAssignees[task.id] || []).forEach((id) => { if (ids.indexOf(id) < 0) ids.push(id); });
+    return ids;
+  }
+  function isAssignee(task, userId) { return taskAssigneeIds(task).indexOf(userId) >= 0; }
+  function avatarStack(ids, max) {
+    max = max || 4;
+    const shown = ids.slice(0, max).map((id) => avatar(profileById(id), 'sm')).join('');
+    const extra = ids.length > max ? '<span class="avatar sm more">+' + (ids.length - max) + '</span>' : '';
+    return '<span class="avatar-stack">' + shown + extra + '</span>';
+  }
 
   function relTime(iso) {
     const d = new Date(iso), now = Date.now();
@@ -299,6 +327,7 @@
     star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 15.1 9 22 9.7 17 14.5 18.3 21.4 12 18 5.7 21.4 7 14.5 2 9.7 8.9 9"/></svg>',
     starFill: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 2.5 15.1 9 22 9.7 17 14.5 18.3 21.4 12 18 5.7 21.4 7 14.5 2 9.7 8.9 9"/></svg>',
     chevR: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+    chevL: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
     arrowL: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>',
     chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-4-.9L3 21l1.9-4.5a8.4 8.4 0 0 1-.9-4A8.4 8.4 0 0 1 12 4a8.4 8.4 0 0 1 9 7.5z"/></svg>',
@@ -376,23 +405,36 @@
 
   async function loadOrgData() {
     const orgId = state.me.org_id;
-    const [org, members, tasks, notifs] = await Promise.all([
+    const [org, members, tasks, notifs, ta] = await Promise.all([
       sb.from('organizations').select('*').eq('id', orgId).single(),
       sb.from('profiles').select('*').eq('org_id', orgId),
       sb.from('tasks').select('*').eq('org_id', orgId).order('created_at', { ascending: false }),
-      sb.from('notifications').select('*').eq('user_id', state.me.id).order('created_at', { ascending: false }).limit(60)
+      sb.from('notifications').select('*').eq('user_id', state.me.id).order('created_at', { ascending: false }).limit(60),
+      sb.from('task_assignees').select('task_id,user_id')
     ]);
     state.org = org.data;
     state.members = (members.data || []).sort((a, b) =>
       (a.role === 'boss' ? -1 : 0) - (b.role === 'boss' ? -1 : 0) || displayName(a).localeCompare(displayName(b)));
     state.tasks = tasks.data || [];
     state.notifications = notifs.data || [];
+    state.taskAssignees = buildAssigneeMap(ta.data);
     if (state.me.role === 'boss') {
       const inv = await sb.from('invites').select('*').eq('org_id', orgId).eq('status', 'pending');
       state.invites = inv.data || [];
     }
     // default scope: boss sees everyone, employee sees own
     state.scope = state.me.role === 'boss' ? 'all' : 'mine';
+  }
+
+  function buildAssigneeMap(rows) {
+    const map = {};
+    (rows || []).forEach((r) => { (map[r.task_id] = map[r.task_id] || []).push(r.user_id); });
+    return map;
+  }
+  async function reloadAssignees() {
+    if (!state.me || !state.me.org_id) return;
+    const { data } = await sb.from('task_assignees').select('task_id,user_id');
+    state.taskAssignees = buildAssigneeMap(data);
   }
 
   async function reloadTasks() {
@@ -414,7 +456,7 @@
 
     const taskCh = sb.channel('rt-tasks-' + orgId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: 'org_id=eq.' + orgId },
-        async () => { await reloadTasks(); if (state.view === 'tasks') renderView(); refreshOpenSheet(); })
+        async () => { await reloadTasks(); renderListView(); refreshOpenSheet(); })
       .subscribe();
 
     const notifCh = sb.channel('rt-notif-' + state.me.id)
@@ -431,7 +473,12 @@
         })
       .subscribe();
 
-    channels = [taskCh, notifCh, profCh];
+    const taCh = sb.channel('rt-ta-' + orgId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' },
+        async () => { await reloadAssignees(); renderListView(); refreshOpenSheet(); })
+      .subscribe();
+
+    channels = [taskCh, notifCh, profCh, taCh];
   }
 
   function onNewNotification(n) {
@@ -682,7 +729,7 @@
       '</div>' +
       '<div id="view"></div>' +
       navBar(unread) +
-      (state.me.role === 'boss' && state.view === 'tasks'
+      (state.me.role === 'boss' && (state.view === 'tasks' || state.view === 'calendar')
         ? '<button class="fab" data-act="task:new" aria-label="' + esc(t('newTaskTitle')) + '">' + I.plus + '</button>' : '');
     renderView();
   }
@@ -696,6 +743,7 @@
     };
     return '<nav class="bottom-nav">' +
       item('tasks', I.list, t('navTasks')) +
+      item('calendar', I.cal, t('navCalendar')) +
       item('notif', I.bell, t('navNotif')) +
       item('settings', I.gear, t('navSettings')) +
       '</nav>';
@@ -705,17 +753,20 @@
     const v = document.getElementById('view');
     if (!v) return;
     if (state.view === 'tasks') v.innerHTML = viewTasks();
+    else if (state.view === 'calendar') v.innerHTML = viewCalendar();
     else if (state.view === 'notif') v.innerHTML = viewNotifications();
     else if (state.view === 'settings') v.innerHTML = viewSettings();
     // toggle FAB visibility
     const fab = $('.fab');
-    if (state.me.role === 'boss') {
-      if (state.view === 'tasks' && !fab) {
-        const b = document.createElement('button'); b.className = 'fab'; b.setAttribute('data-act', 'task:new');
-        b.innerHTML = I.plus; app().appendChild(b);
-      } else if (state.view !== 'tasks' && fab) fab.remove();
-    }
+    const wantFab = state.me.role === 'boss' && (state.view === 'tasks' || state.view === 'calendar');
+    if (wantFab && !fab) {
+      const b = document.createElement('button'); b.className = 'fab'; b.setAttribute('data-act', 'task:new');
+      b.innerHTML = I.plus; app().appendChild(b);
+    } else if (!wantFab && fab) fab.remove();
   }
+
+  // re-render only the list-style views (used after task mutations / realtime)
+  function renderListView() { if (state.view === 'tasks' || state.view === 'calendar') renderView(); }
 
   function updateNavBadges() {
     const unread = state.notifications.filter((n) => !n.is_read).length;
@@ -736,13 +787,21 @@
      ============================================================ */
   function filteredTasks() {
     let list = state.tasks.slice();
-    if (state.scope === 'mine') list = list.filter((t0) => t0.assigned_to === state.me.id);
+    if (state.scope === 'mine') list = list.filter((t0) => isAssignee(t0, state.me.id));
     else if (state.assignee && state.assignee !== 'all') {
-      if (state.assignee === 'unassigned') list = list.filter((t0) => !t0.assigned_to);
-      else list = list.filter((t0) => t0.assigned_to === state.assignee);
+      if (state.assignee === 'unassigned') list = list.filter((t0) => taskAssigneeIds(t0).length === 0);
+      else list = list.filter((t0) => isAssignee(t0, state.assignee));
     }
     if (state.starredOnly) list = list.filter((t0) => t0.starred);
     if (state.statuses.length) list = list.filter((t0) => state.statuses.indexOf(t0.status) >= 0);
+    if (state.dateFrom || state.dateTo) {
+      list = list.filter((t0) => {
+        if (!t0.due_date) return false;
+        if (state.dateFrom && t0.due_date < state.dateFrom) return false;
+        if (state.dateTo && t0.due_date > state.dateTo) return false;
+        return true;
+      });
+    }
     // sort: starred first, then overdue, then by status priority, then created
     const order = { pending: 0, in_progress: 1, on_hold: 2, completed: 3, cancelled: 4 };
     list.sort((a, b) =>
@@ -770,6 +829,9 @@
     html += statusChips.map((f) =>
       '<button class="fchip' + (state.statuses.indexOf(f) >= 0 ? ' active' : '') + '" data-act="filter" data-val="' + f + '">' +
       esc(t('f.' + f)) + '</button>').join('');
+    const dfActive = !!(state.dateFrom || state.dateTo);
+    html += '<button class="fchip date ico-chip' + (dfActive ? ' active' : '') + '" data-act="datefilter:open">' +
+      I.cal + '<span>' + esc(dfActive ? dateRangeLabel() : t('dateFilter')) + '</span></button>';
     html += '</div>';
 
     // assignee filter — only meaningful when viewing everyone's board
@@ -785,7 +847,7 @@
     }
 
     const scopeHasAny = state.scope === 'mine'
-      ? state.tasks.some((x) => x.assigned_to === state.me.id)
+      ? state.tasks.some((x) => isAssignee(x, state.me.id))
       : state.tasks.length > 0;
 
     if (!list.length) {
@@ -825,11 +887,13 @@
   }
 
   function taskCard(task, idx) {
-    const assignee = profileById(task.assigned_to);
     const showAssignee = state.scope === 'all';
     const meta = [];
     if (showAssignee) {
-      meta.push('<span class="mi">' + avatar(assignee, 'sm') + esc(assignee ? displayName(assignee) : t('unassigned')) + '</span>');
+      const ids = taskAssigneeIds(task);
+      if (!ids.length) meta.push('<span class="mi">' + avatar(null, 'sm') + esc(t('unassigned')) + '</span>');
+      else if (ids.length === 1) { const p = profileById(ids[0]); meta.push('<span class="mi">' + avatar(p, 'sm') + esc(displayName(p)) + '</span>'); }
+      else meta.push('<span class="mi">' + avatarStack(ids) + '</span>');
     }
     if (task.due_date) meta.push('<span class="mi' + (isOverdue(task) ? ' overdue' : '') + '">' + I.cal + esc(fmtDueShort(task.due_date)) + '</span>');
     if (task.priority === 'high') meta.push('<span class="chip prio-high">' + I.flag + esc(t('prio.high')) + '</span>');
@@ -874,6 +938,139 @@
     const next = task.status === 'completed' ? 'pending' : 'completed';
     if (next === 'completed') state.armedTaskId = null;
     setStatus(id, next);
+  }
+
+  /* ============================================================
+     DATE UTILITIES + CALENDAR + DATE FILTER
+     ============================================================ */
+  const EL_MONTHS = ['Ιανουάριος', 'Φεβρουάριος', 'Μάρτιος', 'Απρίλιος', 'Μάιος', 'Ιούνιος',
+    'Ιούλιος', 'Αύγουστος', 'Σεπτέμβριος', 'Οκτώβριος', 'Νοέμβριος', 'Δεκέμβριος'];
+
+  function isoOf(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function todayISO() { return isoOf(new Date()); }
+  function parseISO(s) { return new Date(s + 'T00:00:00'); }
+  function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function startOfWeekMon(d) { const x = new Date(d); const k = (x.getDay() + 6) % 7; x.setDate(x.getDate() - k); x.setHours(0, 0, 0, 0); return x; }
+
+  function weekdayLabels() {
+    const loc = state.lang === 'el' ? 'el-GR' : 'en-US';
+    const out = [];
+    for (let i = 0; i < 7; i++) out.push(new Date(2024, 0, 1 + i).toLocaleDateString(loc, { weekday: 'short' }));
+    return out; // Monday-first
+  }
+
+  function dateRangeLabel() {
+    const loc = state.lang === 'el' ? 'el-GR' : 'en-US';
+    const fmt = (s) => parseISO(s).toLocaleDateString(loc, { day: 'numeric', month: 'short' });
+    const f = state.dateFrom ? fmt(state.dateFrom) : '';
+    const to = state.dateTo ? fmt(state.dateTo) : '';
+    if (f && to) return f === to ? f : (f + ' – ' + to);
+    if (f) return '≥ ' + f;
+    if (to) return '≤ ' + to;
+    return t('dateFilter');
+  }
+
+  function applyDatePreset(val) {
+    const now = new Date();
+    if (val === 'today') { const d = todayISO(); state.dateFrom = d; state.dateTo = d; }
+    else if (val === 'week') { const s = startOfWeekMon(now); state.dateFrom = isoOf(s); state.dateTo = isoOf(addDays(s, 6)); }
+    else if (val === 'month') { state.dateFrom = isoOf(startOfMonth(now)); state.dateTo = isoOf(new Date(now.getFullYear(), now.getMonth() + 1, 0)); }
+    modalRoot().innerHTML = ''; state.armedTaskId = null; renderView();
+  }
+
+  function openDateFilter() {
+    const from = state.dateFrom || '', to = state.dateTo || '';
+    modalRoot().innerHTML =
+      '<div class="overlay" data-act="df:bg"><div class="sheet" data-stop="1">' +
+      '<div class="sheet-head"><button class="icon-btn" data-act="df:close">' + I.x + '</button>' +
+      '<h2>' + esc(t('dateFilterTitle')) + '</h2></div>' +
+      '<div class="sheet-body">' +
+      '<div class="filters" style="flex-wrap:wrap;overflow:visible">' +
+      '<button class="fchip" data-act="df:preset" data-val="today">' + esc(t('presetToday')) + '</button>' +
+      '<button class="fchip" data-act="df:preset" data-val="week">' + esc(t('presetWeek')) + '</button>' +
+      '<button class="fchip" data-act="df:preset" data-val="month">' + esc(t('presetMonth')) + '</button>' +
+      '</div>' +
+      '<div class="row" style="margin-top:16px">' +
+      '<label class="field" style="margin:0"><span class="label">' + esc(t('fromLabel')) + '</span>' +
+      '<input class="input" id="df-from" type="date" value="' + esc(from) + '" /></label>' +
+      '<label class="field" style="margin:0"><span class="label">' + esc(t('toLabel')) + '</span>' +
+      '<input class="input" id="df-to" type="date" value="' + esc(to) + '" /></label>' +
+      '</div></div>' +
+      '<div class="sheet-foot">' +
+      '<button class="btn grow" data-act="df:clear">' + esc(t('clear')) + '</button>' +
+      '<button class="btn btn-primary grow" data-act="df:apply">' + esc(t('apply')) + '</button>' +
+      '</div></div></div>';
+  }
+
+  function calendarTasks() {
+    let list = state.tasks.slice();
+    if (state.scope === 'mine') list = list.filter((t0) => isAssignee(t0, state.me.id));
+    return list;
+  }
+
+  function viewCalendar() {
+    if (!state.calMonth) state.calMonth = startOfMonth(new Date());
+    if (!state.calSelected) state.calSelected = todayISO();
+    const loc = state.lang === 'el' ? 'el-GR' : 'en-US';
+    const y = state.calMonth.getFullYear(), m = state.calMonth.getMonth();
+    const monthTitle = (state.lang === 'el' ? EL_MONTHS[m] + ' ' + y
+      : state.calMonth.toLocaleDateString(loc, { month: 'long', year: 'numeric' }));
+
+    const byDay = {};
+    calendarTasks().forEach((tk) => { if (tk.due_date) (byDay[tk.due_date] = byDay[tk.due_date] || []).push(tk); });
+
+    const first = new Date(y, m, 1);
+    const lead = (first.getDay() + 6) % 7;
+    const dim = new Date(y, m + 1, 0).getDate();
+    const rows = Math.ceil((lead + dim) / 7);
+    const gridStart = addDays(first, -lead);
+    const today = todayISO();
+
+    let cells = '';
+    for (let i = 0; i < rows * 7; i++) {
+      const d = addDays(gridStart, i);
+      const iso = isoOf(d);
+      const dayTasks = byDay[iso] || [];
+      let dots = '';
+      if (dayTasks.length) {
+        dots = '<span class="cal-dots">' +
+          dayTasks.slice(0, 3).map((tk) => '<span class="cal-dot" style="background:' + statusBar(tk.status) + '"></span>').join('') +
+          (dayTasks.length > 3 ? '<span class="cal-more">+</span>' : '') + '</span>';
+      }
+      cells += '<button class="cal-cell' + (d.getMonth() === m ? '' : ' out') + (iso === today ? ' today' : '') +
+        (iso === state.calSelected ? ' sel' : '') + '" data-act="cal:day" data-val="' + iso + '">' +
+        '<span class="cal-num">' + d.getDate() + '</span>' + dots + '</button>';
+    }
+
+    const weekdays = weekdayLabels().map((w) => '<span class="cal-wd">' + esc(w) + '</span>').join('');
+
+    const selDate = parseISO(state.calSelected);
+    const selTitle = selDate.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' });
+    const ord = { pending: 0, in_progress: 1, on_hold: 2, completed: 3, cancelled: 4 };
+    const selTasks = (byDay[state.calSelected] || []).slice()
+      .sort((a, b) => (b.starred - a.starred) || (ord[a.status] - ord[b.status]));
+    const list = selTasks.length
+      ? '<div class="stack" style="padding-top:4px">' + selTasks.map((tk, i) => taskCard(tk, i)).join('') + '</div>'
+      : '<div class="empty" style="padding:36px 18px"><div class="e-ico">' + I.cal + '</div><p>' + esc(t('noTasksDay')) + '</p></div>';
+
+    let html = '<div class="screen">';
+    html += '<div class="seg" style="margin-bottom:14px">' +
+      '<button class="' + (state.scope === 'mine' ? 'active' : '') + '" data-act="scope" data-val="mine">' + esc(t('tabMine')) + '</button>' +
+      '<button class="' + (state.scope === 'all' ? 'active' : '') + '" data-act="scope" data-val="all">' + esc(t('tabAll')) + '</button>' +
+      '</div>';
+    html += '<div class="card" style="padding:14px">' +
+      '<div class="cal-head"><button class="icon-btn" data-act="cal:prev" aria-label="prev">' + I.chevL + '</button>' +
+      '<div class="cal-title">' + esc(monthTitle) + '</div>' +
+      '<button class="icon-btn" data-act="cal:next" aria-label="next">' + I.chevR + '</button></div>' +
+      '<button class="link-btn" data-act="cal:today" style="display:block;margin:0 auto 8px">' + esc(t('today')) + '</button>' +
+      '<div class="cal-weekdays">' + weekdays + '</div>' +
+      '<div class="cal-grid">' + cells + '</div>' +
+      '</div>';
+    html += '<div class="section-title" style="margin:18px 4px 8px">' + esc(selTitle) + '</div>' + list;
+    return html + '</div>';
   }
 
   function avatar(p, size) {
@@ -922,15 +1119,14 @@
   }
 
   function canChat(task) {
-    return state.me.role === 'boss' || task.assigned_to === state.me.id;
+    return state.me.role === 'boss' || isAssignee(task, state.me.id);
   }
   function canEditStatus(task) {
-    return state.me.role === 'boss' || task.assigned_to === state.me.id;
+    return state.me.role === 'boss' || isAssignee(task, state.me.id);
   }
 
   function renderTaskSheet(task, withChatLoading) {
     const boss = state.me.role === 'boss';
-    const assignee = profileById(task.assigned_to);
     const creator = profileById(task.created_by);
 
     const statusSelect = canEditStatus(task) ?
@@ -939,9 +1135,22 @@
         '</select>') :
       ('<div style="margin-top:6px"><span id="sheet-status-chip" class="chip ' + task.status + '">' + statusDot + esc(t('status.' + task.status)) + '</span></div>');
 
+    const ids = taskAssigneeIds(task);
+    const assigneesBlock =
+      '<div class="section-title" style="margin:16px 4px 8px">' + esc(t('assigneesLabel')) + '</div>' +
+      '<div class="achip-wrap">' +
+      (ids.length
+        ? ids.map((uid) => {
+            const p = profileById(uid);
+            const isPrimary = task.assigned_to === uid;
+            return '<span class="achip">' + avatar(p, 'sm') + '<span>' + esc(displayName(p)) + '</span>' +
+              (isPrimary ? '<span class="achip-tag">' + esc(t('primaryTag')) + '</span>' : '') + '</span>';
+          }).join('')
+        : '<span class="muted tiny">' + esc(t('unassigned')) + '</span>') +
+      '</div>';
+
     const infoRows =
       '<div class="list mt-16">' +
-      row(I.user, t('assignedTo'), assignee ? displayName(assignee) : t('unassigned')) +
       (task.due_date ? row(I.cal, t('dueLabel'), fmtDate(task.due_date + 'T00:00:00')) : '') +
       row(I.flag, t('priorityLabel'), t('prio.' + task.priority)) +
       '</div>';
@@ -972,6 +1181,7 @@
       statusSelect +
       '</div></div>' +
       (task.description ? '<div class="card mt-16"><div style="white-space:pre-wrap;line-height:1.5">' + esc(task.description) + '</div></div>' : '') +
+      assigneesBlock +
       infoRows +
       (creator ? '<p class="tiny muted" style="margin:12px 4px 0">' +
         esc((state.lang === 'el' ? 'Δημιουργήθηκε από ' : 'Created by ') + displayName(creator) + ' • ' + fmtDate(task.created_at)) + '</p>' : '') +
@@ -1065,32 +1275,47 @@
   async function toggleStar(id) {
     const task = state.tasks.find((x) => x.id === id); if (!task) return;
     const next = !task.starred; task.starred = next;
-    if (state.view === 'tasks') renderView();
+    renderListView();
     refreshOpenSheet();
     const star = $('.star-btn[data-id="' + id + '"]');
     try {
       const { error } = await sb.from('tasks').update({ starred: next }).eq('id', id);
       if (error) throw error;
-    } catch (e) { task.starred = !next; if (state.view === 'tasks') renderView(); refreshOpenSheet(); toast(t('genericError'), true); }
+    } catch (e) { task.starred = !next; renderListView(); refreshOpenSheet(); toast(t('genericError'), true); }
   }
 
   async function setStatus(id, status) {
     const task = state.tasks.find((x) => x.id === id); if (!task) return;
     const prev = task.status; task.status = status;
     if (status === 'completed') task.completed_at = new Date().toISOString();
-    if (state.view === 'tasks') renderView();
+    renderListView();
     refreshOpenSheet();
     try { const { error } = await sb.from('tasks').update({ status }).eq('id', id); if (error) throw error; }
-    catch (e) { task.status = prev; if (state.view === 'tasks') renderView(); refreshOpenSheet(); toast(t('genericError'), true); }
+    catch (e) { task.status = prev; renderListView(); refreshOpenSheet(); toast(t('genericError'), true); }
   }
 
   /* ============================================================
      TASK FORM (create / edit) — boss only
      ============================================================ */
-  function openTaskForm(taskId) {
+  let formExtraAssignees = new Set();
+  function formExtraHtml(primaryId) {
+    const others = state.members.filter((m) => m.id !== primaryId);
+    if (!others.length) return '<p class="muted tiny" style="margin:2px 2px 0">' + esc(t('noOtherMembers')) + '</p>';
+    return others.map((m) => {
+      const sel = formExtraAssignees.has(m.id);
+      return '<button type="button" class="assignee-chip' + (sel ? ' sel' : '') + '" data-act="form:toggle-assignee" data-id="' + m.id + '">' +
+        avatar(m, 'sm') + '<span>' + esc(displayName(m)) + '</span>' +
+        '<span class="ac-tick">' + (sel ? I.check : '') + '</span></button>';
+    }).join('');
+  }
+
+  function openTaskForm(taskId, prefill) {
     const editing = !!taskId;
     const task = editing ? state.tasks.find((x) => x.id === taskId) : null;
     const employees = state.members; // boss can assign to anyone in org (incl. self)
+    const dueVal = task && task.due_date ? task.due_date : (prefill && prefill.due_date ? prefill.due_date : '');
+    formExtraAssignees = new Set(editing ? (state.taskAssignees[taskId] || []) : []);
+    const primaryId = task && task.assigned_to ? task.assigned_to : null;
 
     modalRoot().innerHTML =
       '<div class="overlay" data-act="form:bg"><div class="sheet" data-stop="1">' +
@@ -1103,17 +1328,19 @@
       '<label class="field"><span class="label">' + esc(t('descLabel')) + '</span>' +
       '<textarea class="textarea" id="f-desc" placeholder="' + esc(t('descPlaceholder')) + '">' + esc(task ? (task.description || '') : '') + '</textarea></label>' +
       '<label class="field"><span class="label">' + esc(t('assigneeLabel')) + '</span>' +
-      '<select class="select" id="f-assignee">' +
+      '<select class="select" id="f-assignee" data-change="form:primary">' +
       '<option value="">' + esc(t('unassigned')) + '</option>' +
       employees.map((m) => '<option value="' + m.id + '"' + (task && task.assigned_to === m.id ? ' selected' : '') + '>' +
         esc(displayName(m)) + (m.role === 'boss' ? ' (' + t('bossTag') + ')' : '') + '</option>').join('') +
       '</select></label>' +
+      '<div class="field"><span class="label">' + esc(t('extraAssigneesLabel')) + '</span>' +
+      '<div id="form-extra" class="assignee-wrap">' + formExtraHtml(primaryId) + '</div></div>' +
       '<div class="row">' +
       '<label class="field"><span class="label">' + esc(t('priorityLabel')) + '</span>' +
       '<select class="select" id="f-prio">' + PRIORITIES.map((p) =>
         '<option value="' + p + '"' + ((task ? task.priority : 'normal') === p ? ' selected' : '') + '>' + esc(t('prio.' + p)) + '</option>').join('') + '</select></label>' +
       '<label class="field"><span class="label">' + esc(t('dueLabel')) + '</span>' +
-      '<input class="input" id="f-due" type="date" value="' + esc(task && task.due_date ? task.due_date : '') + '" /></label>' +
+      '<input class="input" id="f-due" type="date" value="' + esc(dueVal) + '" /></label>' +
       '</div>' +
       (editing ?
         '<label class="field"><span class="label">' + esc(t('statusLabel')) + '</span>' +
@@ -1130,28 +1357,40 @@
   async function saveTask(taskId, btn) {
     const title = ($('#f-title') || {}).value || '';
     if (!title.trim()) { const m = $('#form-msg'); if (m) m.innerHTML = '<div class="error-text">' + esc(t('titleRequired')) + '</div>'; return; }
+    const primary = (($('#f-assignee') || {}).value) || null;
+    const extras = Array.prototype.slice.call(formExtraAssignees).filter((uid) => uid && uid !== primary);
     const payload = {
       title: title.trim(),
       description: (($('#f-desc') || {}).value || '').trim() || null,
-      assigned_to: (($('#f-assignee') || {}).value || '') || null,
+      assigned_to: primary,
       priority: ($('#f-prio') || {}).value || 'normal',
       due_date: (($('#f-due') || {}).value || '') || null
     };
     btnBusy(btn, true);
     try {
+      let id = taskId;
       if (taskId) {
         const st = ($('#f-status') || {}).value; if (st) payload.status = st;
         const { error } = await sb.from('tasks').update(payload).eq('id', taskId);
         if (error) throw error;
+        // reconcile additional assignees (only add/remove the diffs)
+        const existing = state.taskAssignees[taskId] || [];
+        const toAdd = extras.filter((u) => existing.indexOf(u) < 0);
+        const toRemove = existing.filter((u) => extras.indexOf(u) < 0);
+        if (toRemove.length) { const r = await sb.from('task_assignees').delete().eq('task_id', taskId).in('user_id', toRemove); if (r.error) throw r.error; }
+        if (toAdd.length) { const r = await sb.from('task_assignees').insert(toAdd.map((u) => ({ task_id: taskId, user_id: u }))); if (r.error) throw r.error; }
       } else {
         payload.org_id = state.me.org_id; payload.created_by = state.me.id;
-        const { error } = await sb.from('tasks').insert(payload);
+        const { data, error } = await sb.from('tasks').insert(payload).select().single();
         if (error) throw error;
+        id = data.id;
+        if (extras.length) { const r = await sb.from('task_assignees').insert(extras.map((u) => ({ task_id: id, user_id: u }))); if (r.error) throw r.error; }
       }
       await reloadTasks();
+      await reloadAssignees();
       modalRoot().innerHTML = '';
-      if (openTaskId === taskId) { const tk = state.tasks.find((x) => x.id === taskId); if (tk) { renderTaskSheet(tk); subscribeChat(taskId); loadComments(taskId); } }
-      if (state.view === 'tasks') renderView();
+      if (openTaskId === id) { const tk = state.tasks.find((x) => x.id === id); if (tk) { renderTaskSheet(tk); subscribeChat(id); loadComments(id); } }
+      renderListView();
       toast(t('savedToast'));
     } catch (e) { btnBusy(btn, false); const m = $('#form-msg'); if (m) m.innerHTML = '<div class="error-text">' + esc(e.message || t('genericError')) + '</div>'; }
   }
@@ -1162,7 +1401,7 @@
       const { error } = await sb.from('tasks').delete().eq('id', id); if (error) throw error;
       state.tasks = state.tasks.filter((x) => x.id !== id);
       modalRoot().innerHTML = ''; openTaskId = null;
-      if (state.view === 'tasks') renderView();
+      renderListView();
       toast(t('savedToast'));
     } catch (e) { toast(t('genericError'), true); }
   }
@@ -1462,7 +1701,26 @@
         break;
       }
 
-      case 'task:new': openTaskForm(null); break;
+      case 'cal:prev': { const c = state.calMonth || startOfMonth(new Date()); state.calMonth = new Date(c.getFullYear(), c.getMonth() - 1, 1); renderView(); break; }
+      case 'cal:next': { const c = state.calMonth || startOfMonth(new Date()); state.calMonth = new Date(c.getFullYear(), c.getMonth() + 1, 1); renderView(); break; }
+      case 'cal:today': state.calMonth = startOfMonth(new Date()); state.calSelected = todayISO(); state.armedTaskId = null; renderView(); break;
+      case 'cal:day': state.calSelected = val; state.calMonth = startOfMonth(parseISO(val)); state.armedTaskId = null; renderView(); break;
+
+      case 'datefilter:open': openDateFilter(); break;
+      case 'df:close': modalRoot().innerHTML = ''; break;
+      case 'df:bg': if (e.target.classList.contains('overlay')) modalRoot().innerHTML = ''; break;
+      case 'df:preset': applyDatePreset(val); break;
+      case 'df:apply': {
+        let f = (($('#df-from') || {}).value) || null;
+        let to = (($('#df-to') || {}).value) || null;
+        if (f && to && f > to) { const tmp = f; f = to; to = tmp; }
+        state.dateFrom = f; state.dateTo = to; state.armedTaskId = null;
+        modalRoot().innerHTML = ''; renderView();
+        break;
+      }
+      case 'df:clear': state.dateFrom = null; state.dateTo = null; modalRoot().innerHTML = ''; renderView(); break;
+
+      case 'task:new': openTaskForm(null, state.view === 'calendar' ? { due_date: state.calSelected } : null); break;
       case 'task:click': handleTaskClick(id); break;
       case 'task:check': e.stopPropagation(); toggleComplete(id); break;
       case 'task:star': e.stopPropagation(); toggleStar(id); break;
@@ -1474,6 +1732,12 @@
       case 'sheet:bg': if (e.target.classList.contains('overlay')) closeSheet(); break;
       case 'form:close': modalRoot().innerHTML = ''; break;
       case 'form:bg': if (e.target.classList.contains('overlay')) modalRoot().innerHTML = ''; break;
+      case 'form:toggle-assignee': {
+        if (formExtraAssignees.has(id)) formExtraAssignees.delete(id); else formExtraAssignees.add(id);
+        const pid = ($('#f-assignee') || {}).value || null;
+        const wrap = $('#form-extra'); if (wrap) wrap.innerHTML = formExtraHtml(pid);
+        break;
+      }
 
       case 'chat:send': sendComment(id); break;
 
@@ -1505,6 +1769,12 @@
       case 'task:status': setStatus(id, el.value); break;
       case 'assignee': state.assignee = el.value; state.armedTaskId = null; renderView(); break;
       case 'notify:toggle': toggleNotify(el.checked); break;
+      case 'form:primary': {
+        const pid = el.value || null;
+        if (pid) formExtraAssignees.delete(pid);
+        const wrap = $('#form-extra'); if (wrap) wrap.innerHTML = formExtraHtml(pid);
+        break;
+      }
     }
   });
 
@@ -1577,7 +1847,9 @@
       renderConfigMissing, renderAuth, renderOnboarding, renderApp, renderView,
       viewTasks, viewNotifications, viewSettings, openTaskForm, renderTaskSheet, taskCard,
       filteredTasks, appendMessage, msgHtml, renderChat,
-      taskCheckboxShown, handleTaskClick, toggleComplete, setStatus
+      taskCheckboxShown, handleTaskClick, toggleComplete, setStatus,
+      viewCalendar, applyDatePreset, openDateFilter,
+      taskAssigneeIds, isAssignee, buildAssigneeMap, formExtraHtml
     };
   }
 
