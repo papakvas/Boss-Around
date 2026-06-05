@@ -63,7 +63,7 @@
       descLabel: 'Περιγραφή', descPlaceholder: 'Προσθέστε λεπτομέρειες (προαιρετικό)',
       assigneeLabel: 'Ανάθεση σε', dueLabel: 'Προθεσμία', statusLabel: 'Κατάσταση',
       assigneesLabel: 'Υπεύθυνοι', extraAssigneesLabel: 'Επιπλέον υπεύθυνοι',
-      primaryTag: 'κύριος', noOtherMembers: 'Δεν υπάρχουν άλλα μέλη στην ομάδα.',
+      primaryTag: 'κύριος', noOtherMembers: 'Δεν υπάρχουν άλλα μέλη στην ομάδα.', selectPlaceholder: 'Επιλέξτε…',
       createTaskBtn: 'Δημιουργία εργασίας', saveChanges: 'Αποθήκευση αλλαγών',
       deleteTask: 'Διαγραφή εργασίας', deleteTaskConfirm: 'Να διαγραφεί αυτή η εργασία; Η ενέργεια δεν αναιρείται.',
       titleRequired: 'Ο τίτλος είναι υποχρεωτικός.',
@@ -83,7 +83,9 @@
       secProfile: 'Προφίλ', secAppearance: 'Εμφάνιση', secNotif: 'Ειδοποιήσεις',
       secTeam: 'Η ομάδα μου', secOrg: 'Επιχείρηση', secAccount: 'Λογαριασμός',
       nameLabel: 'Όνομα', roleLabel: 'Ρόλος',
-      'role.boss': 'Αφεντικό', 'role.employee': 'Υπάλληλος',
+      'role.boss': 'Αφεντικό', 'role.employee': 'Υπάλληλος', 'role.manager': 'Υπεύθυνος',
+      canAddJobs: 'Προσθήκη εργασιών',
+      roleHint: 'Ο «Υπεύθυνος» έχει πλήρη πρόσβαση (όπως το αφεντικό), εκτός από τη διαγραφή/μετονομασία της επιχείρησης και τη διαχείριση ρόλων.',
       themeLabel: 'Θέμα', 'theme.system': 'Συστήματος', 'theme.light': 'Φωτεινό', 'theme.dark': 'Σκοτεινό',
       langLabel: 'Γλώσσα',
       notifInApp: 'Ειδοποιήσεις εφαρμογής', notifInAppSub: 'Λαμβάνετε ειδοποιήσεις μέσα στην εφαρμογή.',
@@ -163,7 +165,7 @@
       descLabel: 'Description', descPlaceholder: 'Add details (optional)',
       assigneeLabel: 'Assign to', dueLabel: 'Due date', statusLabel: 'Status',
       assigneesLabel: 'Assignees', extraAssigneesLabel: 'Additional assignees',
-      primaryTag: 'main', noOtherMembers: 'No other team members yet.',
+      primaryTag: 'main', noOtherMembers: 'No other team members yet.', selectPlaceholder: 'Select…',
       createTaskBtn: 'Create task', saveChanges: 'Save changes',
       deleteTask: 'Delete task', deleteTaskConfirm: 'Delete this task? This cannot be undone.',
       titleRequired: 'Title is required.',
@@ -183,7 +185,9 @@
       secProfile: 'Profile', secAppearance: 'Appearance', secNotif: 'Notifications',
       secTeam: 'My team', secOrg: 'Business', secAccount: 'Account',
       nameLabel: 'Name', roleLabel: 'Role',
-      'role.boss': 'Boss', 'role.employee': 'Employee',
+      'role.boss': 'Boss', 'role.employee': 'Employee', 'role.manager': 'Manager',
+      canAddJobs: 'Can add tasks',
+      roleHint: 'A “Manager” has full access (like the boss), except for deleting/renaming the business and managing roles.',
       themeLabel: 'Theme', 'theme.system': 'System', 'theme.light': 'Light', 'theme.dark': 'Dark',
       langLabel: 'Language',
       notifInApp: 'In-app notifications', notifInAppSub: 'Get alerts inside the app.',
@@ -276,6 +280,12 @@
     const extra = ids.length > max ? '<span class="avatar sm more">+' + (ids.length - max) + '</span>' : '';
     return '<span class="avatar-stack">' + shown + extra + '</span>';
   }
+
+  // roles & permissions
+  function hasFullAccess() { return !!state.me && (state.me.role === 'boss' || state.me.role === 'manager'); }
+  function isOwner() { return !!state.me && state.me.role === 'boss'; }
+  function canCreateTasks() { return hasFullAccess() || !!(state.me && state.me.can_create_tasks); }
+  function canManageTask(task) { return hasFullAccess() || (!!task && !!state.me && task.created_by === state.me.id); }
 
   function relTime(iso) {
     const d = new Date(iso), now = Date.now();
@@ -468,8 +478,12 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: 'org_id=eq.' + orgId },
         async () => {
           const { data } = await sb.from('profiles').select('*').eq('org_id', orgId);
-          if (data) state.members = data;
-          if (state.view === 'tasks' || state.view === 'settings') renderView();
+          if (data) {
+            state.members = data;
+            const mine = data.find((p) => p.id === state.me.id);
+            if (mine) { state.me.role = mine.role; state.me.can_create_tasks = mine.can_create_tasks; state.me.full_name = mine.full_name; }
+          }
+          if (state.view === 'tasks' || state.view === 'calendar' || state.view === 'settings') renderView();
         })
       .subscribe();
 
@@ -729,7 +743,7 @@
       '</div>' +
       '<div id="view"></div>' +
       navBar(unread) +
-      (state.me.role === 'boss' && (state.view === 'tasks' || state.view === 'calendar')
+      (canCreateTasks() && (state.view === 'tasks' || state.view === 'calendar')
         ? '<button class="fab" data-act="task:new" aria-label="' + esc(t('newTaskTitle')) + '">' + I.plus + '</button>' : '');
     renderView();
   }
@@ -758,7 +772,7 @@
     else if (state.view === 'settings') v.innerHTML = viewSettings();
     // toggle FAB visibility
     const fab = $('.fab');
-    const wantFab = state.me.role === 'boss' && (state.view === 'tasks' || state.view === 'calendar');
+    const wantFab = canCreateTasks() && (state.view === 'tasks' || state.view === 'calendar');
     if (wantFab && !fab) {
       const b = document.createElement('button'); b.className = 'fab'; b.setAttribute('data-act', 'task:new');
       b.innerHTML = I.plus; app().appendChild(b);
@@ -1126,7 +1140,6 @@
   }
 
   function renderTaskSheet(task, withChatLoading) {
-    const boss = state.me.role === 'boss';
     const creator = profileById(task.created_by);
 
     const statusSelect = canEditStatus(task) ?
@@ -1173,7 +1186,7 @@
       '<h2>' + esc(task.title) + '</h2>' +
       '<button class="star-btn' + (task.starred ? ' on' : '') + '" id="sheet-star" data-act="task:star" data-id="' + task.id + '">' +
         (task.starred ? I.starFill : I.star) + '</button>' +
-      (boss ? iconBtn('task:edit', I.pencil, task.id) : '') +
+      (canManageTask(task) ? iconBtn('task:edit', I.pencil, task.id) : '') +
       '</div>' +
       '<div class="sheet-body">' +
       '<div class="spread" style="align-items:flex-start"><div class="grow">' +
@@ -1298,15 +1311,31 @@
      TASK FORM (create / edit) — boss only
      ============================================================ */
   let formExtraAssignees = new Set();
+  let formExtraOpen = false;
   function formExtraHtml(primaryId) {
     const others = state.members.filter((m) => m.id !== primaryId);
     if (!others.length) return '<p class="muted tiny" style="margin:2px 2px 0">' + esc(t('noOtherMembers')) + '</p>';
-    return others.map((m) => {
-      const sel = formExtraAssignees.has(m.id);
-      return '<button type="button" class="assignee-chip' + (sel ? ' sel' : '') + '" data-act="form:toggle-assignee" data-id="' + m.id + '">' +
-        avatar(m, 'sm') + '<span>' + esc(displayName(m)) + '</span>' +
-        '<span class="ac-tick">' + (sel ? I.check : '') + '</span></button>';
-    }).join('');
+
+    const selIds = Array.prototype.slice.call(formExtraAssignees).filter((id) => id !== primaryId);
+    const names = selIds.map((id) => displayName(profileById(id))).filter(Boolean);
+    const summary = names.length
+      ? '<span class="ms-summary">' + esc(names.join(', ')) + '</span>'
+      : '<span class="ms-summary ms-ph">' + esc(t('selectPlaceholder')) + '</span>';
+
+    let panel = '';
+    if (formExtraOpen) {
+      panel = '<div class="ms-panel">' + others.map((m) => {
+        const sel = formExtraAssignees.has(m.id);
+        return '<button type="button" class="ms-opt' + (sel ? ' sel' : '') + '" data-act="form:toggle-assignee" data-id="' + m.id + '">' +
+          '<span class="ms-check">' + (sel ? I.check : '') + '</span>' +
+          avatar(m, 'sm') + '<span class="ms-name">' + esc(displayName(m)) + '</span></button>';
+      }).join('') + '</div>';
+    }
+
+    return '<div class="ms' + (formExtraOpen ? ' open' : '') + '">' +
+      '<button type="button" class="ms-trigger" data-act="form:extra-toggle">' +
+      summary + '<span class="ms-chev">' + I.chevR + '</span></button>' +
+      panel + '</div>';
   }
 
   function openTaskForm(taskId, prefill) {
@@ -1315,6 +1344,7 @@
     const employees = state.members; // boss can assign to anyone in org (incl. self)
     const dueVal = task && task.due_date ? task.due_date : (prefill && prefill.due_date ? prefill.due_date : '');
     formExtraAssignees = new Set(editing ? (state.taskAssignees[taskId] || []) : []);
+    formExtraOpen = false;
     const primaryId = task && task.assigned_to ? task.assigned_to : null;
 
     modalRoot().innerHTML =
@@ -1334,7 +1364,7 @@
         esc(displayName(m)) + (m.role === 'boss' ? ' (' + t('bossTag') + ')' : '') + '</option>').join('') +
       '</select></label>' +
       '<div class="field"><span class="label">' + esc(t('extraAssigneesLabel')) + '</span>' +
-      '<div id="form-extra" class="assignee-wrap">' + formExtraHtml(primaryId) + '</div></div>' +
+      '<div id="form-extra">' + formExtraHtml(primaryId) + '</div></div>' +
       '<div class="row">' +
       '<label class="field"><span class="label">' + esc(t('priorityLabel')) + '</span>' +
       '<select class="select" id="f-prio">' + PRIORITIES.map((p) =>
@@ -1346,7 +1376,7 @@
         '<label class="field"><span class="label">' + esc(t('statusLabel')) + '</span>' +
         '<select class="select" id="f-status">' + STATUSES.map((s) =>
           '<option value="' + s + '"' + (task.status === s ? ' selected' : '') + '>' + esc(t('status.' + s)) + '</option>').join('') + '</select></label>' : '') +
-      (editing ? '<button class="btn btn-danger btn-block mt-8" data-act="task:delete" data-id="' + taskId + '">' + I.trash + esc(t('deleteTask')) + '</button>' : '') +
+      (editing && canManageTask(task) ? '<button class="btn btn-danger btn-block mt-8" data-act="task:delete" data-id="' + taskId + '">' + I.trash + esc(t('deleteTask')) + '</button>' : '') +
       '</div>' +
       '<div class="sheet-foot">' +
       '<button class="btn grow" data-act="form:close">' + esc(t('cancel')) + '</button>' +
@@ -1464,7 +1494,7 @@
      SETTINGS VIEW
      ============================================================ */
   function viewSettings() {
-    const me = state.me, boss = me.role === 'boss';
+    const me = state.me, owner = isOwner(), full = hasFullAccess();
     const theme = me.theme || 'system';
     const lang = state.lang;
     const notifPerm = ('Notification' in window) ? Notification.permission : 'unsupported';
@@ -1476,7 +1506,7 @@
       avatar(me, 'lg') +
       '<div class="grow"><div style="font-weight:800;font-size:18px">' + esc(displayName(me)) + '</div>' +
       '<div class="muted tiny">' + esc(me.email || '') + '</div>' +
-      '<span class="chip ' + (boss ? 'completed' : '') + '" style="margin-top:6px">' + esc(t('role.' + me.role)) + '</span>' +
+      '<span class="chip ' + roleChipClass(me.role) + '" style="margin-top:6px">' + esc(t('role.' + me.role)) + '</span>' +
       '</div></div>' +
       '<label class="field mt-16" style="margin-bottom:0"><span class="label">' + esc(t('nameLabel')) + '</span>' +
       '<div class="row"><input class="input" id="set-name" type="text" value="' + esc(me.full_name || '') + '" />' +
@@ -1506,8 +1536,32 @@
         : '<button class="btn btn-soft btn-sm" data-act="notif:perm">' + esc(t('enable')) + '</button>') +
       '</div></div></div>';
 
-    // team (boss)
-    if (boss) {
+    // team & roles
+    const roleChip = (m) => '<span class="chip ' + roleChipClass(m.role) + '" style="font-size:11px">' + esc(t('role.' + m.role)) + '</span>';
+    const memberRow = (m) => {
+      const isSelf = m.id === me.id;
+      const editable = owner && m.role !== 'boss' && !isSelf;
+      const ctl = editable
+        ? '<div class="member-ctl">' +
+            '<select class="select sm" data-change="member:role" data-id="' + m.id + '">' +
+            '<option value="employee"' + (m.role === 'employee' ? ' selected' : '') + '>' + esc(t('role.employee')) + '</option>' +
+            '<option value="manager"' + (m.role === 'manager' ? ' selected' : '') + '>' + esc(t('role.manager')) + '</option>' +
+            '</select>' +
+            (m.role === 'employee'
+              ? '<label class="member-toggle">' + switchEl('member:cancreate', m.can_create_tasks, m.id) + '<span>' + esc(t('canAddJobs')) + '</span></label>'
+              : '') +
+          '</div>'
+        : '';
+      return '<div class="list-row"' + (editable ? ' style="align-items:flex-start"' : '') + '>' + avatar(m) +
+        '<div class="lr-main"><div class="t">' + esc(displayName(m)) +
+        (isSelf ? ' <span class="chip" style="padding:2px 7px;font-size:10px">' + esc(t('youTag')) + '</span>' : '') + '</div>' +
+        '<div class="s">' + esc(m.email || '') + '</div>' + ctl + '</div>' +
+        (editable ? '' : roleChip(m)) +
+        '</div>';
+    };
+
+    // team (boss & managers have full access)
+    if (full) {
       html += '<div><div class="section-title">' + esc(t('secTeam')) + '</div>' +
         '<div class="card pad-lg">' +
         '<div class="label" style="font-size:13px;font-weight:700;color:var(--text-2)">' + esc(t('joinCodeLabel')) + '</div>' +
@@ -1520,14 +1574,10 @@
         '<div id="invite-msg"></div>' +
         '</div>';
 
-      // members
-      html += '<div class="list mt-8">' + state.members.map((m) =>
-        '<div class="list-row">' + avatar(m) +
-        '<div class="lr-main"><div class="t">' + esc(displayName(m)) + (m.id === me.id ? ' <span class="chip" style="padding:2px 7px;font-size:10px">' + esc(t('youTag')) + '</span>' : '') + '</div>' +
-        '<div class="s">' + esc(m.email || '') + '</div></div>' +
-        '<span class="chip' + (m.role === 'boss' ? ' completed' : '') + '" style="font-size:11px">' + esc(t('role.' + m.role)) + '</span></div>').join('') + '</div>';
+      html += '<div class="list mt-8">' + state.members.map(memberRow).join('') + '</div>';
 
-      // pending invites
+      if (owner) html += '<p class="tiny muted" style="margin:8px 4px 0">' + esc(t('roleHint')) + '</p>';
+
       if (state.invites.length) {
         html += '<div class="section-title">' + esc(t('pendingInvites')) + '</div><div class="list">' +
           state.invites.map((iv) => '<div class="list-row"><div class="lr-ico">' + I.mail + '</div>' +
@@ -1535,8 +1585,10 @@
             '<button class="icon-btn" data-act="invite:cancel" data-id="' + iv.id + '">' + I.x + '</button></div>').join('') + '</div>';
       }
       html += '</div>';
+    }
 
-      // org
+    // organization
+    if (owner) {
       html += '<div><div class="section-title">' + esc(t('secOrg')) + '</div><div class="list">' +
         '<div class="list-row"><div class="lr-ico">' + I.shop + '</div>' +
         '<div class="lr-main"><div class="t">' + esc(t('businessNameLabel')) + '</div></div></div>' +
@@ -1546,10 +1598,10 @@
         '<div class="lr-main"><div class="t" style="color:var(--st-cancel-fg)">' + esc(t('deleteBiz')) + '</div></div></div>' +
         '</div></div>';
     } else {
-      // employee: show business + leave
       html += '<div><div class="section-title">' + esc(t('secOrg')) + '</div><div class="list">' +
         '<div class="list-row"><div class="lr-ico">' + I.shop + '</div>' +
-        '<div class="lr-main"><div class="t">' + esc(state.org.name) + '</div><div class="s">' + esc(t('joinCodeLabel')) + ': ' + esc(state.org.join_code) + '</div></div></div>' +
+        '<div class="lr-main"><div class="t">' + esc(state.org.name) + '</div>' +
+        (full ? '<div class="s">' + esc(t('joinCodeLabel')) + ': ' + esc(state.org.join_code) + '</div>' : '') + '</div></div>' +
         '<div class="list-row link" data-act="org:leave"><div class="lr-ico" style="background:var(--st-cancel-bg);color:var(--st-cancel-fg)">' + I.logout + '</div>' +
         '<div class="lr-main"><div class="t" style="color:var(--st-cancel-fg)">' + esc(t('leaveBiz')) + '</div></div></div>' +
         '</div></div>';
@@ -1572,9 +1624,11 @@
       options.map((o) => '<option value="' + o[0] + '"' + (value === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') +
       '</select></div>';
   }
-  function switchEl(act, on) {
-    return '<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') + ' data-change="' + act + '" /><span class="track"></span></label>';
+  function switchEl(act, on, id) {
+    return '<label class="switch"><input type="checkbox"' + (on ? ' checked' : '') +
+      ' data-change="' + act + '"' + (id ? ' data-id="' + id + '"' : '') + ' /><span class="track"></span></label>';
   }
+  function roleChipClass(role) { return role === 'boss' ? 'completed' : role === 'manager' ? 'in_progress' : ''; }
 
   async function saveName() {
     const name = (($('#set-name') || {}).value || '').trim();
@@ -1637,6 +1691,23 @@
     if (on && ('Notification' in window) && Notification.permission === 'default') requestNotifPermission();
   }
 
+  async function setMemberRole(uid, role) {
+    try {
+      const { error } = await sb.rpc('set_member_role', { p_user_id: uid, p_role: role });
+      if (error) throw error;
+      const m = state.members.find((x) => x.id === uid); if (m) m.role = role;
+      renderView(); toast(t('savedToast'));
+    } catch (e) { toast(t('genericError'), true); renderView(); }
+  }
+  async function setMemberCanCreate(uid, val) {
+    try {
+      const { error } = await sb.rpc('set_member_can_create', { p_user_id: uid, p_value: val });
+      if (error) throw error;
+      const m = state.members.find((x) => x.id === uid); if (m) m.can_create_tasks = val;
+      renderView(); toast(t('savedToast'));
+    } catch (e) { toast(t('genericError'), true); renderView(); }
+  }
+
   /* ============================================================
      SIGN OUT
      ============================================================ */
@@ -1652,6 +1723,11 @@
      EVENT DELEGATION
      ============================================================ */
   document.addEventListener('click', (e) => {
+    // close the additional-assignees dropdown when tapping outside it
+    if (formExtraOpen && !e.target.closest('.ms')) {
+      formExtraOpen = false;
+      const w = $('#form-extra'); if (w) w.innerHTML = formExtraHtml((($('#f-assignee') || {}).value) || null);
+    }
     const el = e.target.closest('[data-act]');
     if (!el) return;
     const act = el.getAttribute('data-act');
@@ -1738,6 +1814,12 @@
         const wrap = $('#form-extra'); if (wrap) wrap.innerHTML = formExtraHtml(pid);
         break;
       }
+      case 'form:extra-toggle': {
+        formExtraOpen = !formExtraOpen;
+        const pid = ($('#f-assignee') || {}).value || null;
+        const wrap = $('#form-extra'); if (wrap) wrap.innerHTML = formExtraHtml(pid);
+        break;
+      }
 
       case 'chat:send': sendComment(id); break;
 
@@ -1769,6 +1851,8 @@
       case 'task:status': setStatus(id, el.value); break;
       case 'assignee': state.assignee = el.value; state.armedTaskId = null; renderView(); break;
       case 'notify:toggle': toggleNotify(el.checked); break;
+      case 'member:role': setMemberRole(id, el.value); break;
+      case 'member:cancreate': setMemberCanCreate(id, el.checked); break;
       case 'form:primary': {
         const pid = el.value || null;
         if (pid) formExtraAssignees.delete(pid);
@@ -1849,7 +1933,9 @@
       filteredTasks, appendMessage, msgHtml, renderChat,
       taskCheckboxShown, handleTaskClick, toggleComplete, setStatus,
       viewCalendar, applyDatePreset, openDateFilter,
-      taskAssigneeIds, isAssignee, buildAssigneeMap, formExtraHtml
+      taskAssigneeIds, isAssignee, buildAssigneeMap, formExtraHtml,
+      setExtraOpen: (v) => { formExtraOpen = v; },
+      hasFullAccess, isOwner, canCreateTasks, canManageTask
     };
   }
 
