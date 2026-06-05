@@ -39,7 +39,7 @@
       navTasks: 'Εργασίες', navNotif: 'Ειδοποιήσεις', navSettings: 'Ρυθμίσεις',
       tabMine: 'Δικές μου', tabAll: 'Όλες',
       'f.all': 'Όλες', 'f.pending': 'Εκκρεμείς', 'f.in_progress': 'Σε εξέλιξη',
-      'f.on_hold': 'Σε αναμονή', 'f.completed': 'Ολοκληρωμένες', 'f.starred': 'Με αστέρι',
+      'f.on_hold': 'Σε αναμονή', 'f.completed': 'Ολοκληρωμένες', 'f.cancelled': 'Ακυρωμένες', 'f.starred': 'Με αστέρι',
       assignedTo: 'Ανατέθηκε σε', unassigned: 'Χωρίς ανάθεση', noDue: 'Χωρίς προθεσμία',
       allAssignees: 'Όλοι οι υπεύθυνοι',
       emptyTasksBossTitle: 'Δεν υπάρχουν εργασίες ακόμη',
@@ -132,7 +132,7 @@
       navTasks: 'Tasks', navNotif: 'Alerts', navSettings: 'Settings',
       tabMine: 'Mine', tabAll: 'All',
       'f.all': 'All', 'f.pending': 'Pending', 'f.in_progress': 'In progress',
-      'f.on_hold': 'On hold', 'f.completed': 'Completed', 'f.starred': 'Starred',
+      'f.on_hold': 'On hold', 'f.completed': 'Completed', 'f.cancelled': 'Cancelled', 'f.starred': 'Starred',
       assignedTo: 'Assigned to', unassigned: 'Unassigned', noDue: 'No due date',
       allAssignees: 'All assignees',
       emptyTasksBossTitle: 'No tasks yet',
@@ -202,7 +202,7 @@
   const state = {
     ready: false, session: null, me: null, org: null,
     members: [], tasks: [], notifications: [], invites: [], myInvites: [],
-    view: 'tasks', scope: 'mine', filter: 'all', assignee: 'all',
+    view: 'tasks', scope: 'mine', statuses: [], starredOnly: false, assignee: 'all', collapsed: {},
     authMode: 'signin', lang: 'el', busy: false
   };
 
@@ -739,8 +739,8 @@
       if (state.assignee === 'unassigned') list = list.filter((t0) => !t0.assigned_to);
       else list = list.filter((t0) => t0.assigned_to === state.assignee);
     }
-    if (state.filter === 'starred') list = list.filter((t0) => t0.starred);
-    else if (state.filter !== 'all') list = list.filter((t0) => t0.status === state.filter);
+    if (state.starredOnly) list = list.filter((t0) => t0.starred);
+    if (state.statuses.length) list = list.filter((t0) => state.statuses.indexOf(t0.status) >= 0);
     // sort: starred first, then overdue, then by status priority, then created
     const order = { pending: 0, in_progress: 1, on_hold: 2, completed: 3, cancelled: 4 };
     list.sort((a, b) =>
@@ -752,7 +752,7 @@
 
   function viewTasks() {
     const list = filteredTasks();
-    const filters = ['all', 'pending', 'in_progress', 'on_hold', 'completed', 'starred'];
+    const statusChips = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'];
     let html = '<div class="screen">';
 
     html += '<div class="seg" style="margin-bottom:12px">' +
@@ -760,9 +760,15 @@
       '<button class="' + (state.scope === 'all' ? 'active' : '') + '" data-act="scope" data-val="all">' + esc(t('tabAll')) + '</button>' +
       '</div>';
 
-    html += '<div class="filters">' + filters.map((f) =>
-      '<button class="fchip' + (state.filter === f ? ' active' : '') + '" data-act="filter" data-val="' + f + '">' +
-      esc(t('f.' + f)) + '</button>').join('') + '</div>';
+    // multi-select filter row: "All" (clears statuses) + Starred toggle + each status
+    html += '<div class="filters">';
+    html += '<button class="fchip' + (state.statuses.length === 0 ? ' active' : '') + '" data-act="filter" data-val="all">' + esc(t('f.all')) + '</button>';
+    html += '<button class="fchip star' + (state.starredOnly ? ' active' : '') + '" data-act="filter" data-val="starred">' +
+      '<span class="fchip-star">' + (state.starredOnly ? I.starFill : I.star) + '</span>' + esc(t('f.starred')) + '</button>';
+    html += statusChips.map((f) =>
+      '<button class="fchip' + (state.statuses.indexOf(f) >= 0 ? ' active' : '') + '" data-act="filter" data-val="' + f + '">' +
+      esc(t('f.' + f)) + '</button>').join('');
+    html += '</div>';
 
     // assignee filter — only meaningful when viewing everyone's board
     if (state.scope === 'all') {
@@ -785,21 +791,29 @@
       if (!scopeHasAny) html += emptyState(I.checks, boss ? t('emptyTasksBossTitle') : t('emptyTasksEmpTitle'),
         boss ? t('emptyTasksBossSub') : t('emptyTasksEmpSub'));
       else html += emptyState(I.checks, t('emptyFilterTitle'), t('emptyFilterSub'));
-    } else if (state.filter === 'all' || state.filter === 'starred') {
-      // group into sections by status (category)
-      const order = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'];
-      const groups = {};
-      list.forEach((tk) => { (groups[tk.status] = groups[tk.status] || []).push(tk); });
-      const present = order.filter((s) => groups[s]);
-      html += present.map((s, idx) =>
-        '<div class="spread" style="align-items:center;margin:' + (idx === 0 ? '4px' : '22px') + ' 4px 8px">' +
-        '<span class="chip ' + s + '">' + statusDot + esc(t('status.' + s)) + '</span>' +
-        '<span class="muted" style="font-weight:800;font-size:13px">' + groups[s].length + '</span></div>' +
-        '<div class="stack">' + groups[s].map((tk, i) => taskCard(tk, i)).join('') + '</div>'
-      ).join('');
-    } else {
-      html += '<div class="stack">' + list.map((tk, i) => taskCard(tk, i)).join('') + '</div>';
+      return html + '</div>';
     }
+
+    // always group into collapsible sections by status (category)
+    const order = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'];
+    const groups = {};
+    list.forEach((tk) => { (groups[tk.status] = groups[tk.status] || []).push(tk); });
+    const present = order.filter((s) => groups[s]);
+    html += present.map((s, idx) => {
+      const collapsed = !!state.collapsed[s];
+      return '<div class="group">' +
+        '<button class="group-head' + (idx === 0 ? ' first' : '') + (collapsed ? ' collapsed' : '') +
+          '" data-act="group:toggle" data-val="' + s + '">' +
+          '<span class="chip ' + s + '">' + statusDot + esc(t('f.' + s)) + '</span>' +
+          '<span class="g-count">' + groups[s].length + '</span>' +
+          '<span class="g-chev">' + I.chevR + '</span>' +
+        '</button>' +
+        '<div class="group-body' + (collapsed ? ' collapsed' : '') + '" data-group="' + s + '">' +
+          '<div class="stack" style="padding-top:8px">' + groups[s].map((tk, i) => taskCard(tk, i)).join('') + '</div>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+
     return html + '</div>';
   }
 
@@ -1400,7 +1414,24 @@
       case 'nav': state.view = val; renderApp(); break;
 
       case 'scope': state.scope = val; renderView(); break;
-      case 'filter': state.filter = val; renderView(); break;
+      case 'filter': {
+        if (val === 'all') state.statuses = [];
+        else if (val === 'starred') state.starredOnly = !state.starredOnly;
+        else {
+          const i = state.statuses.indexOf(val);
+          if (i >= 0) state.statuses.splice(i, 1); else state.statuses.push(val);
+        }
+        renderView();
+        break;
+      }
+      case 'group:toggle': {
+        const collapsed = !state.collapsed[val];
+        state.collapsed[val] = collapsed;
+        const body = $('.group-body[data-group="' + val + '"]');
+        if (body) body.classList.toggle('collapsed', collapsed);
+        el.classList.toggle('collapsed', collapsed);
+        break;
+      }
 
       case 'task:new': openTaskForm(null); break;
       case 'task:open': {

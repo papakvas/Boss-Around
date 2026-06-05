@@ -47,7 +47,16 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
+        var hadController = !!navigator.serviceWorker.controller;
         navigator.serviceWorker.register('sw.js').catch(function () {});
+        var refreshing = false;
+        // When a freshly-deployed service worker takes control, reload once so
+        // the latest app.js/styles.css are used (skips the very first install).
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (!hadController || refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
       });
     }
   </script>

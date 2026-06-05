@@ -1,24 +1,20 @@
-/* Boss Around — service worker
-   App-shell caching so the PWA opens offline. Supabase API calls are always
-   network-first (never cached) so data stays fresh. */
+/* Boss Around — service worker (v2, network-first)
+   IMPORTANT: app code (HTML/CSS/JS) is served NETWORK-FIRST so updates you
+   deploy are picked up immediately when online. The cache is only a fallback
+   for offline use. Supabase API/realtime traffic is never cached. */
 
-const CACHE = 'boss-around-v1';
+const CACHE = 'boss-around-v2';
 const SHELL = [
-  './',
-  './index.html',
-  './styles.css',
-  './app.js',
-  './config.js',
-  './manifest.webmanifest',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-maskable-512.png',
-  './favicon.png'
+  './', './index.html', './styles.css', './app.js', './config.js',
+  './manifest.webmanifest', './icon-192.png', './icon-512.png',
+  './icon-maskable-512.png', './favicon.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((c) => c.addAll(SHELL).catch(() => {})) // best-effort precache
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -36,36 +32,33 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  // Never cache API / auth / realtime traffic — always go to the network.
-  if (url.hostname.endsWith('supabase.co') || url.hostname.endsWith('supabase.in')) {
-    return; // default browser handling
-  }
+  // Never touch API / auth / realtime — always straight to the network.
+  if (url.hostname.endsWith('supabase.co') || url.hostname.endsWith('supabase.in')) return;
 
-  // Same-origin app shell: cache-first, fall back to network, then offline page.
+  // Same-origin app shell: NETWORK-FIRST, fall back to cache, then index.html.
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-        return fetch(req)
-          .then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-            return res;
-          })
-          .catch(() => caches.match('./index.html'));
-      })
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
+          return res;
+        })
+        .catch(() => caches.match(req).then((cached) => cached || caches.match('./index.html')))
     );
   }
 });
 
-// Focus / open the app when a (future) push notification is clicked.
+// Allow the page to tell a waiting SW to take over immediately.
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
-      for (const client of list) {
-        if ('focus' in client) return client.focus();
-      }
+      for (const client of list) { if ('focus' in client) return client.focus(); }
       if (self.clients.openWindow) return self.clients.openWindow('./');
     })
   );
