@@ -202,8 +202,8 @@ a { color: var(--accent); }
 }
 .card.pad-lg { padding: 20px; }
 
-.task {
-  display: flex; gap: 12px; align-items: flex-start; cursor: pointer;
+  .task {
+  display: flex; gap: 0; align-items: flex-start; cursor: pointer;
   border-left: 4px solid var(--bar, var(--border-2));
   transition: transform .08s ease, box-shadow .15s, border-color .15s;
   animation: fade-up .35s ease both;
@@ -211,6 +211,24 @@ a { color: var(--accent); }
 .task:active { transform: scale(.985); }
 .task:hover { box-shadow: var(--shadow); }
 .task.done .t-title { text-decoration: line-through; color: var(--text-2); }
+
+/* reveal-on-tap completion checkbox */
+.t-check {
+  border: 0; background: none; cursor: pointer; padding: 0; flex: 0 0 auto;
+  max-width: 0; opacity: 0; overflow: hidden; pointer-events: none; margin: 0;
+  display: flex; align-items: center; align-self: flex-start;
+  transition: max-width .2s ease, opacity .2s ease, margin .2s ease;
+}
+.task.armed .t-check, .task.done .t-check { max-width: 28px; opacity: 1; margin: 1px 12px 0 0; pointer-events: auto; }
+.t-check .cbox {
+  width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--border-2);
+  display: grid; place-items: center; color: #fff; flex: 0 0 auto;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.t-check:active .cbox { transform: scale(.86); }
+.t-check .cbox svg { width: 15px; height: 15px; opacity: 0; transition: opacity .15s; }
+.task.done .t-check .cbox { background: var(--st-done-fg); border-color: var(--st-done-fg); }
+.task.done .t-check .cbox svg { opacity: 1; }
 .t-main { flex: 1; min-width: 0; }
 .t-title { font-weight: 700; font-size: 15.5px; line-height: 1.3; word-break: break-word; }
 .t-desc { color: var(--text-2); font-size: 13.5px; margin-top: 3px;

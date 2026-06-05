@@ -42,6 +42,7 @@
       'f.on_hold': 'Σε αναμονή', 'f.completed': 'Ολοκληρωμένες', 'f.cancelled': 'Ακυρωμένες', 'f.starred': 'Με αστέρι',
       assignedTo: 'Ανατέθηκε σε', unassigned: 'Χωρίς ανάθεση', noDue: 'Χωρίς προθεσμία',
       allAssignees: 'Όλοι οι υπεύθυνοι',
+      markComplete: 'Σήμανση ως ολοκληρωμένη',
       emptyTasksBossTitle: 'Δεν υπάρχουν εργασίες ακόμη',
       emptyTasksBossSub: 'Πατήστε + για να αναθέσετε την πρώτη εργασία στην ομάδα σας.',
       emptyTasksEmpTitle: 'Καμία εργασία',
@@ -135,6 +136,7 @@
       'f.on_hold': 'On hold', 'f.completed': 'Completed', 'f.cancelled': 'Cancelled', 'f.starred': 'Starred',
       assignedTo: 'Assigned to', unassigned: 'Unassigned', noDue: 'No due date',
       allAssignees: 'All assignees',
+      markComplete: 'Mark as completed',
       emptyTasksBossTitle: 'No tasks yet',
       emptyTasksBossSub: 'Tap + to assign the first task to your team.',
       emptyTasksEmpTitle: 'No tasks',
@@ -202,7 +204,7 @@
   const state = {
     ready: false, session: null, me: null, org: null,
     members: [], tasks: [], notifications: [], invites: [], myInvites: [],
-    view: 'tasks', scope: 'mine', statuses: [], starredOnly: false, assignee: 'all', collapsed: {},
+    view: 'tasks', scope: 'mine', statuses: [], starredOnly: false, assignee: 'all', collapsed: {}, armedTaskId: null,
     authMode: 'signin', lang: 'el', busy: false
   };
 
@@ -832,12 +834,16 @@
     if (task.due_date) meta.push('<span class="mi' + (isOverdue(task) ? ' overdue' : '') + '">' + I.cal + esc(fmtDueShort(task.due_date)) + '</span>');
     if (task.priority === 'high') meta.push('<span class="chip prio-high">' + I.flag + esc(t('prio.high')) + '</span>');
 
-    return '<div class="card task' + (task.status === 'completed' ? ' done' : '') + '" style="--bar:' + statusBar(task.status) +
-      ';animation-delay:' + Math.min(idx * 35, 350) + 'ms" data-act="task:open" data-id="' + task.id + '">' +
+    const armed = state.armedTaskId === task.id;
+    return '<div class="card task' + (task.status === 'completed' ? ' done' : '') + (armed ? ' armed' : '') +
+      '" style="--bar:' + statusBar(task.status) + ';animation-delay:' + Math.min(idx * 35, 350) + 'ms"' +
+      ' data-act="task:click" data-id="' + task.id + '">' +
+      '<button class="t-check" data-act="task:check" data-id="' + task.id + '" aria-label="' + esc(t('markComplete')) + '">' +
+        '<span class="cbox">' + I.check + '</span></button>' +
       '<div class="t-main">' +
       '<div class="spread" style="align-items:flex-start;gap:8px">' +
       '<div class="t-title">' + esc(task.title) + '</div>' +
-      '<button class="star-btn' + (task.starred ? ' on' : '') + '" data-act="task:star" data-id="' + task.id + '" data-stop="1" aria-label="star">' +
+      '<button class="star-btn' + (task.starred ? ' on' : '') + '" data-act="task:star" data-id="' + task.id + '" aria-label="star">' +
         (task.starred ? I.starFill : I.star) + '</button>' +
       '</div>' +
       (task.description ? '<div class="t-desc">' + esc(task.description) + '</div>' : '') +
@@ -846,6 +852,28 @@
       meta.join('') +
       '</div>' +
       '</div></div>';
+  }
+
+  function taskCheckboxShown(task) {
+    return task.status === 'completed' || state.armedTaskId === task.id;
+  }
+  function handleTaskClick(id) {
+    const task = state.tasks.find((x) => x.id === id);
+    if (!task) return;
+    if (taskCheckboxShown(task)) { openTask(id); }       // checkbox already shown → open details
+    else { state.armedTaskId = id; renderArmState(); }   // first tap → reveal the checkbox
+  }
+  function renderArmState() {
+    $$('.task').forEach((card) => {
+      card.classList.toggle('armed', state.armedTaskId === card.getAttribute('data-id'));
+    });
+  }
+  function toggleComplete(id) {
+    const task = state.tasks.find((x) => x.id === id);
+    if (!task) return;
+    const next = task.status === 'completed' ? 'pending' : 'completed';
+    if (next === 'completed') state.armedTaskId = null;
+    setStatus(id, next);
   }
 
   function avatar(p, size) {
@@ -1411,10 +1439,11 @@
       case 'onb:join': doJoinOrg(el); break;
       case 'onb:accept': doAcceptInvite(id, el); break;
 
-      case 'nav': state.view = val; renderApp(); break;
+      case 'nav': state.view = val; state.armedTaskId = null; renderApp(); break;
 
-      case 'scope': state.scope = val; renderView(); break;
+      case 'scope': state.scope = val; state.armedTaskId = null; renderView(); break;
       case 'filter': {
+        state.armedTaskId = null;
         if (val === 'all') state.statuses = [];
         else if (val === 'starred') state.starredOnly = !state.starredOnly;
         else {
@@ -1434,10 +1463,8 @@
       }
 
       case 'task:new': openTaskForm(null); break;
-      case 'task:open': {
-        if (e.target.closest('.star-btn')) break; // star handled separately
-        openTask(id); break;
-      }
+      case 'task:click': handleTaskClick(id); break;
+      case 'task:check': e.stopPropagation(); toggleComplete(id); break;
       case 'task:star': e.stopPropagation(); toggleStar(id); break;
       case 'task:edit': openTaskForm(id); break;
       case 'task:save': saveTask(id || null, el); break;
@@ -1476,7 +1503,7 @@
       case 'theme:set': setTheme(el.value); break;
       case 'lang:set': setLang(el.value); break;
       case 'task:status': setStatus(id, el.value); break;
-      case 'assignee': state.assignee = el.value; renderView(); break;
+      case 'assignee': state.assignee = el.value; state.armedTaskId = null; renderView(); break;
       case 'notify:toggle': toggleNotify(el.checked); break;
     }
   });
@@ -1549,7 +1576,8 @@
       setState: (p) => Object.assign(state, p),
       renderConfigMissing, renderAuth, renderOnboarding, renderApp, renderView,
       viewTasks, viewNotifications, viewSettings, openTaskForm, renderTaskSheet, taskCard,
-      filteredTasks, appendMessage, msgHtml, renderChat
+      filteredTasks, appendMessage, msgHtml, renderChat,
+      taskCheckboxShown, handleTaskClick, toggleComplete, setStatus
     };
   }
 
