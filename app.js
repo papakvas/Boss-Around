@@ -108,6 +108,23 @@
       deleteBiz: 'Διαγραφή επιχείρησης', deleteBizConfirm: 'Διαγραφή της επιχείρησης και ΟΛΩΝ των εργασιών; Δεν αναιρείται.',
       signOutConfirm: 'Αποσύνδεση;',
       savedToast: 'Αποθηκεύτηκε ✓', youTag: 'Εσείς', bossTag: 'Αφεντικό',
+      navHome: 'Αρχική',
+      greetMorning: 'Καλημέρα', greetAfternoon: 'Καλησπέρα', greetEvening: 'Καλησπέρα',
+      homeSubBoss: 'Η εικόνα της ομάδας με μια ματιά', homeSubEmp: 'Οι εργασίες σας με μια ματιά',
+      statOpen: 'Ανοιχτές', statOverdue: 'Εκπρόθεσμες', statDueToday: 'Σήμερα', statDoneWeek: 'Ολοκληρ. (7 ημ.)',
+      workloadTitle: 'Φόρτος ομάδας', openTasksWord: 'ανοιχτές',
+      todayTitle: 'Για σήμερα', allClearTitle: 'Όλα τακτοποιημένα', allClearSub: 'Δεν έχετε επείγουσες εργασίες.',
+      dueTimeLabel: 'Ώρα', recurLabel: 'Επανάληψη',
+      'recur.none': 'Καμία', 'recur.daily': 'Καθημερινά', 'recur.weekly': 'Εβδομαδιαία', 'recur.monthly': 'Μηνιαία',
+      checklistTitle: 'Λίστα ελέγχου', noSubtasks: 'Καμία υποεργασία ακόμη.', addSubtaskPlaceholder: 'Προσθήκη στοιχείου…',
+      add: 'Προσθήκη', delete: 'Διαγραφή', mention: 'Αναφορά', unreadLabel: 'Μη αναγνωσμένα',
+      'n.mention': 'σας ανέφερε', 'n.reminder': 'Υπενθύμιση εργασίας',
+      phoneLabel: 'Τηλέφωνο', phonePlaceholder: 'π.χ. 69XXXXXXXX', jobTitleLabel: 'Θέση', jobTitlePlaceholder: 'π.χ. Σερβιτόρος',
+      removeMember: 'Αφαίρεση', removeMemberConfirm: 'Αφαίρεση του/της {name} από την επιχείρηση;', memberRemoved: 'Το μέλος αφαιρέθηκε',
+      changeEmail: 'Αλλαγή email', changePassword: 'Αλλαγή κωδικού', newPasswordPlaceholder: 'Νέος κωδικός', passwordTooShort: 'Τουλάχιστον 6 χαρακτήρες.',
+      emailChangeSent: 'Σας στείλαμε σύνδεσμο επιβεβαίωσης.', passwordChanged: 'Ο κωδικός άλλαξε ✓',
+      deleteAccount: 'Διαγραφή λογαριασμού', deleteAccountSub: 'Αφαιρεί τα δεδομένα σας', deleteAccountConfirm: 'Σίγουρα; Τα δεδομένα σας θα αφαιρεθούν οριστικά.',
+      deleteAccountBoss: 'Ως ιδιοκτήτης, διαγράψτε ή μεταβιβάστε πρώτα την επιχείρηση.',
 
       genericError: 'Παρουσιάστηκε σφάλμα. Δοκιμάστε ξανά.',
       configMissingTitle: 'Απαιτείται ρύθμιση',
@@ -215,6 +232,23 @@
       deleteBiz: 'Delete business', deleteBizConfirm: 'Delete the business and ALL its tasks? This cannot be undone.',
       signOutConfirm: 'Sign out?',
       savedToast: 'Saved ✓', youTag: 'You', bossTag: 'Boss',
+      navHome: 'Home',
+      greetMorning: 'Good morning', greetAfternoon: 'Good afternoon', greetEvening: 'Good evening',
+      homeSubBoss: 'Your team at a glance', homeSubEmp: 'Your work at a glance',
+      statOpen: 'Open', statOverdue: 'Overdue', statDueToday: 'Today', statDoneWeek: 'Done (7d)',
+      workloadTitle: 'Team workload', openTasksWord: 'open',
+      todayTitle: 'For today', allClearTitle: 'All clear', allClearSub: 'Nothing urgent on your plate.',
+      dueTimeLabel: 'Time', recurLabel: 'Repeat',
+      'recur.none': 'None', 'recur.daily': 'Daily', 'recur.weekly': 'Weekly', 'recur.monthly': 'Monthly',
+      checklistTitle: 'Checklist', noSubtasks: 'No items yet.', addSubtaskPlaceholder: 'Add an item…',
+      add: 'Add', delete: 'Delete', mention: 'Mention', unreadLabel: 'Unread',
+      'n.mention': 'mentioned you', 'n.reminder': 'Task reminder',
+      phoneLabel: 'Phone', phonePlaceholder: 'e.g. 555-0123', jobTitleLabel: 'Job title', jobTitlePlaceholder: 'e.g. Server',
+      removeMember: 'Remove', removeMemberConfirm: 'Remove {name} from the business?', memberRemoved: 'Member removed',
+      changeEmail: 'Change email', changePassword: 'Change password', newPasswordPlaceholder: 'New password', passwordTooShort: 'At least 6 characters.',
+      emailChangeSent: 'We sent a confirmation link.', passwordChanged: 'Password changed ✓',
+      deleteAccount: 'Delete account', deleteAccountSub: 'Removes your data', deleteAccountConfirm: 'Are you sure? Your data will be permanently removed.',
+      deleteAccountBoss: 'As the owner, delete or transfer the business first.',
 
       genericError: 'Something went wrong. Please try again.',
       configMissingTitle: 'Setup required',
@@ -234,6 +268,7 @@
     view: 'tasks', scope: 'mine', statuses: [], starredOnly: false, assignee: 'all', collapsed: {}, armedTaskId: null,
     search: '', sort: 'smart', overdueOnly: false, taskLimit: PAGE_SIZE, refreshing: false,
     calMonth: null, calSelected: null, dateFrom: null, dateTo: null, taskAssignees: {},
+    subtasks: {}, unread: {},
     authMode: 'signin', lang: 'el', busy: false
   };
 
@@ -323,8 +358,38 @@
     const loc = state.lang === 'el' ? 'el-GR' : 'en-US';
     return new Date(d + 'T00:00:00').toLocaleDateString(loc, { day: 'numeric', month: 'short' });
   }
+  function fmtTime(hm) {
+    if (!hm) return '';
+    const parts = String(hm).split(':');
+    return parts[0].padStart(2, '0') + ':' + (parts[1] || '00');
+  }
+  function dueLabel(task) {
+    if (!task.due_date) return t('noDue');
+    return fmtDueShort(task.due_date) + (task.due_time ? ' · ' + fmtTime(task.due_time) : '');
+  }
+  function dueAt(task) {
+    if (!task.due_date) return null;
+    const tm = task.due_time ? (task.due_time.length === 5 ? task.due_time + ':00' : task.due_time) : '23:59:59';
+    return new Date(task.due_date + 'T' + tm);
+  }
   const isOverdue = (task) => task.due_date && task.status !== 'completed' && task.status !== 'cancelled'
-    && new Date(task.due_date + 'T23:59:59') < new Date();
+    && dueAt(task) < new Date();
+
+  const RECUR = ['none', 'daily', 'weekly', 'monthly'];
+  function recurLabel(r) { return t('recur.' + (r || 'none')); }
+
+  // checklist / subtasks
+  function subtasksFor(taskId) {
+    return (state.subtasks[taskId] || []).slice().sort((a, b) => (a.position - b.position) || (new Date(a.created_at) - new Date(b.created_at)));
+  }
+  function subtaskProgress(taskId) {
+    const list = state.subtasks[taskId] || [];
+    return { done: list.filter((s) => s.done).length, total: list.length };
+  }
+
+  // unread chat
+  function isUnread(taskId) { return !!state.unread[taskId]; }
+  function unreadCount() { return Object.keys(state.unread).length; }
 
   function toast(msg, isErr) {
     const root = document.getElementById('toast-root');
@@ -452,7 +517,12 @@
     palette: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.2"/><circle cx="17.5" cy="10.5" r="1.2"/><circle cx="8.5" cy="7.5" r="1.2"/><circle cx="6.5" cy="12.5" r="1.2"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1 .8-1.7 1.7-1.7H17a5 5 0 0 0 5-5c0-4.4-4.5-7.8-10-7.8z"/></svg>',
     search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
     sort: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg>',
-    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg>'
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg>',
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>',
+    phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+    at: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.9 7.9"/></svg>',
+    repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>'
   };
   const statusDot = '<span class="ico"></span>';
 
@@ -514,12 +584,14 @@
 
   async function loadOrgData() {
     const orgId = state.me.org_id;
-    const [org, members, tasks, notifs, ta] = await Promise.all([
+    const [org, members, tasks, notifs, ta, subs, unread] = await Promise.all([
       sb.from('organizations').select('*').eq('id', orgId).single(),
       sb.from('profiles').select('*').eq('org_id', orgId),
       sb.from('tasks').select('*').eq('org_id', orgId).order('created_at', { ascending: false }),
       sb.from('notifications').select('*').eq('user_id', state.me.id).order('created_at', { ascending: false }).limit(60),
-      sb.from('task_assignees').select('task_id,user_id')
+      sb.from('task_assignees').select('task_id,user_id'),
+      sb.from('subtasks').select('*'),
+      sb.rpc('unread_task_ids')
     ]);
     state.org = org.data;
     state.members = (members.data || []).sort((a, b) =>
@@ -527,12 +599,36 @@
     state.tasks = tasks.data || [];
     state.notifications = notifs.data || [];
     state.taskAssignees = buildAssigneeMap(ta.data);
+    state.subtasks = buildSubtaskMap(subs.data);
+    state.unread = {}; (unread.data || []).forEach((r) => { state.unread[r.task_id] = true; });
     if (state.me.role === 'boss') {
       const inv = await sb.from('invites').select('*').eq('org_id', orgId).eq('status', 'pending');
       state.invites = inv.data || [];
     }
     // default scope: boss sees everyone, employee sees own
     state.scope = state.me.role === 'boss' ? 'all' : 'mine';
+  }
+
+  function buildSubtaskMap(rows) {
+    const map = {};
+    (rows || []).forEach((r) => { (map[r.task_id] = map[r.task_id] || []).push(r); });
+    return map;
+  }
+  async function reloadSubtasks() {
+    if (!state.me || !state.me.org_id) return;
+    const { data } = await sb.from('subtasks').select('*');
+    state.subtasks = buildSubtaskMap(data);
+  }
+  async function reloadUnread() {
+    if (!state.me || !state.me.org_id) return;
+    const { data } = await sb.rpc('unread_task_ids');
+    state.unread = {}; (data || []).forEach((r) => { state.unread[r.task_id] = true; });
+  }
+  async function markRead(taskId) {
+    if (!state.unread[taskId]) { /* still upsert to advance the read pointer */ }
+    delete state.unread[taskId];
+    updateNavBadges();
+    try { await sb.from('chat_reads').upsert({ user_id: state.me.id, task_id: taskId, last_read_at: new Date().toISOString() }, { onConflict: 'user_id,task_id' }); } catch (e) {}
   }
 
   function buildAssigneeMap(rows) {
@@ -591,7 +687,25 @@
         async () => { await reloadAssignees(); renderListView(); refreshOpenSheet(); })
       .subscribe();
 
-    channels = [taskCh, notifCh, profCh, taCh];
+    const subCh = sb.channel('rt-sub-' + orgId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'subtasks' },
+        async () => { await reloadSubtasks(); renderListView(); refreshOpenSheet(); })
+      .subscribe();
+
+    // global comments stream (RLS limits rows to chats I can access) → unread badges
+    const cmtCh = sb.channel('rt-cmt-' + state.me.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' },
+        (payload) => {
+          const c = payload.new;
+          if (!c || c.user_id === state.me.id) return;
+          const tk = state.tasks.find((x) => x.id === c.task_id);
+          if (!tk || !(hasFullAccess() || isAssignee(tk, state.me.id))) return;
+          if (openTaskId === c.task_id) { markRead(c.task_id); return; }
+          if (!state.unread[c.task_id]) { state.unread[c.task_id] = true; updateNavBadges(); renderListView(); }
+        })
+      .subscribe();
+
+    channels = [taskCh, notifCh, profCh, taCh, subCh, cmtCh];
   }
 
   function onNewNotification(n) {
@@ -848,17 +962,18 @@
   }
 
   function navBar(unread) {
-    const item = (key, icon, label) => {
+    const item = (key, icon, label, badgeN) => {
       const active = state.view === key;
-      const badge = (key === 'notif' && unread) ? '<span class="nav-badge">' + (unread > 9 ? '9+' : unread) + '</span>' : '';
+      const badge = badgeN ? '<span class="nav-badge">' + (badgeN > 9 ? '9+' : badgeN) + '</span>' : '';
       return '<button class="nav-item' + (active ? ' active' : '') + '" data-act="nav" data-val="' + key + '"' +
         (active ? ' aria-current="page"' : '') + ' aria-label="' + esc(label) + '">' +
         '<span class="nav-ico" aria-hidden="true">' + icon + badge + '</span><span>' + esc(label) + '</span></button>';
     };
     return '<nav class="bottom-nav" aria-label="' + esc(t('navTasks')) + '">' +
-      item('tasks', I.list, t('navTasks')) +
+      item('home', I.home, t('navHome')) +
+      item('tasks', I.list, t('navTasks'), unreadCount()) +
       item('calendar', I.cal, t('navCalendar')) +
-      item('notif', I.bell, t('navNotif')) +
+      item('notif', I.bell, t('navNotif'), unread) +
       item('settings', I.gear, t('navSettings')) +
       '</nav>';
   }
@@ -866,7 +981,8 @@
   function renderView() {
     const v = document.getElementById('view');
     if (!v) return;
-    if (state.view === 'tasks') v.innerHTML = viewTasks();
+    if (state.view === 'home') v.innerHTML = viewHome();
+    else if (state.view === 'tasks') v.innerHTML = viewTasks();
     else if (state.view === 'calendar') v.innerHTML = viewCalendar();
     else if (state.view === 'notif') v.innerHTML = viewNotifications();
     else if (state.view === 'settings') v.innerHTML = viewSettings();
@@ -884,16 +1000,75 @@
 
   function updateNavBadges() {
     const unread = state.notifications.filter((n) => !n.is_read).length;
-    const navBadgeWrap = $('.nav-item[data-val="notif"] .nav-ico');
-    const top = $('.app-bar .icon-btn[data-val="notif"]');
-    if (navBadgeWrap) {
-      const ex = navBadgeWrap.querySelector('.nav-badge'); if (ex) ex.remove();
-      if (unread) { const s = document.createElement('span'); s.className = 'nav-badge'; s.textContent = unread > 9 ? '9+' : unread; navBadgeWrap.appendChild(s); }
+    const setBadge = (wrap, n, cls) => {
+      if (!wrap) return;
+      const ex = wrap.querySelector('.' + cls); if (ex) ex.remove();
+      if (n) { const s = document.createElement('span'); s.className = cls; s.textContent = n > 9 ? '9+' : n; wrap.appendChild(s); }
+    };
+    setBadge($('.nav-item[data-val="notif"] .nav-ico'), unread, 'nav-badge');
+    setBadge($('.nav-item[data-val="tasks"] .nav-ico'), unreadCount(), 'nav-badge');
+    setBadge($('.app-bar .icon-btn[data-val="notif"]'), unread, 'count');
+  }
+
+  /* ============================================================
+     HOME DASHBOARD
+     ============================================================ */
+  function todayStr() {
+    const n = new Date();
+    return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+  }
+  function viewHome() {
+    const me = state.me, full = hasFullAccess();
+    const all = state.tasks;
+    const mine = all.filter((tk) => isAssignee(tk, me.id));
+    const scopeTasks = full ? all : mine;
+    const now = new Date(), today = todayStr();
+    const openSet = ['pending', 'in_progress', 'on_hold'];
+    const isOpen = (tk) => openSet.indexOf(tk.status) >= 0;
+    const open = scopeTasks.filter(isOpen).length;
+    const overdue = scopeTasks.filter(isOverdue).length;
+    const dueToday = scopeTasks.filter((tk) => tk.due_date === today && isOpen(tk)).length;
+    const weekAgo = new Date(now.getTime() - 7 * 864e5);
+    const doneWeek = scopeTasks.filter((tk) => tk.status === 'completed'
+      && new Date(tk.completed_at || tk.updated_at || tk.created_at) >= weekAgo).length;
+
+    const hr = now.getHours();
+    const greet = hr < 12 ? t('greetMorning') : hr < 18 ? t('greetAfternoon') : t('greetEvening');
+    const first = (displayName(me) || '').split(' ')[0];
+
+    let html = '<div class="screen">';
+    html += '<div class="hero" style="padding:6px 0 16px"><h1 style="margin:0">' + esc(greet) +
+      (me.full_name ? ', ' + esc(first) : '') + '</h1>' +
+      '<p style="margin:4px 0 0">' + esc(full ? t('homeSubBoss') : t('homeSubEmp')) + '</p></div>';
+
+    const stat = (n, label, cls, val) => '<button class="stat' + (cls ? ' ' + cls : '') + '" data-act="home:goto" data-val="' + val + '">' +
+      '<div class="stat-n">' + n + '</div><div class="stat-l">' + esc(label) + '</div></button>';
+    html += '<div class="stat-grid">' +
+      stat(open, t('statOpen'), '', 'open') +
+      stat(overdue, t('statOverdue'), overdue ? 'danger' : '', 'overdue') +
+      stat(dueToday, t('statDueToday'), dueToday ? 'warn' : '', 'today') +
+      stat(doneWeek, t('statDoneWeek'), 'ok', 'doneweek') +
+      '</div>';
+
+    if (full) {
+      const rows = state.members.map((m) => ({ m: m, n: all.filter((tk) => isAssignee(tk, m.id) && isOpen(tk)).length }))
+        .sort((a, b) => b.n - a.n || displayName(a.m).localeCompare(displayName(b.m)));
+      html += '<div class="section-title" style="margin-top:20px">' + esc(t('workloadTitle')) + '</div>';
+      html += '<div class="stack">' + rows.map((r) =>
+        '<button class="card row-card" data-act="home:member" data-val="' + r.m.id + '">' +
+        avatar(r.m, 'md') +
+        '<div class="rc-main"><div class="rc-title">' + esc(displayName(r.m)) +
+        (r.m.role !== 'employee' ? ' <span class="chip ' + roleChipClass(r.m.role) + '">' + esc(t('role.' + r.m.role)) + '</span>' : '') +
+        '</div><div class="rc-sub">' + r.n + ' ' + esc(t('openTasksWord')) + '</div></div>' +
+        '<span class="wl-badge' + (r.n === 0 ? ' zero' : '') + '">' + r.n + '</span></button>').join('') + '</div>';
+    } else {
+      const todays = mine.filter((tk) => isOpen(tk) && (tk.due_date === today || isOverdue(tk)))
+        .sort((a, b) => (isOverdue(b) - isOverdue(a)) || ('' + (a.due_date || '')).localeCompare('' + (b.due_date || '')));
+      html += '<div class="section-title" style="margin-top:20px">' + esc(t('todayTitle')) + '</div>';
+      if (!todays.length) html += emptyState(I.checks, t('allClearTitle'), t('allClearSub'));
+      else html += '<div class="stack">' + todays.slice(0, 6).map((tk, i) => taskCard(tk, i)).join('') + '</div>';
     }
-    if (top) {
-      const ex = top.querySelector('.count'); if (ex) ex.remove();
-      if (unread) { const s = document.createElement('span'); s.className = 'count'; s.textContent = unread > 9 ? '9+' : unread; top.appendChild(s); }
-    }
+    return html + '</div>';
   }
 
   /* ============================================================
@@ -1047,6 +1222,8 @@
   function taskCard(task, idx) {
     const showAssignee = state.scope === 'all';
     const overdue = isOverdue(task);
+    const prog = subtaskProgress(task.id);
+    const unread = isUnread(task.id);
     const meta = [];
     if (overdue) meta.push('<span class="chip overdue-badge">' + I.alert + esc(t('overdueBadge')) + '</span>');
     if (showAssignee) {
@@ -1055,7 +1232,9 @@
       else if (ids.length === 1) { const p = profileById(ids[0]); meta.push('<span class="mi">' + avatar(p, 'sm') + esc(displayName(p)) + '</span>'); }
       else meta.push('<span class="mi">' + avatarStack(ids) + '</span>');
     }
-    if (task.due_date) meta.push('<span class="mi' + (overdue ? ' overdue' : '') + '">' + I.cal + esc(fmtDueShort(task.due_date)) + '</span>');
+    if (task.due_date) meta.push('<span class="mi' + (overdue ? ' overdue' : '') + '">' + I.cal + esc(fmtDueShort(task.due_date) + (task.due_time ? ' ' + fmtTime(task.due_time) : '')) + '</span>');
+    if (prog.total) meta.push('<span class="chip checklist-chip' + (prog.done === prog.total ? ' all' : '') + '">' + I.check + prog.done + '/' + prog.total + '</span>');
+    if (task.recurrence && task.recurrence !== 'none') meta.push('<span class="chip recur-chip" aria-label="' + esc(recurLabel(task.recurrence)) + '">' + I.repeat + '</span>');
     if (task.priority === 'high') meta.push('<span class="chip prio-high">' + I.flag + esc(t('prio.high')) + '</span>');
 
     const armed = state.armedTaskId === task.id;
@@ -1066,7 +1245,7 @@
         '<span class="cbox">' + I.check + '</span></button>' +
       '<div class="t-main">' +
       '<div class="spread" style="align-items:flex-start;gap:8px">' +
-      '<div class="t-title">' + esc(task.title) + '</div>' +
+      '<div class="t-title">' + (unread ? '<span class="unread-dot" aria-label="' + esc(t('unreadLabel')) + '"></span>' : '') + esc(task.title) + '</div>' +
       '<button class="star-btn' + (task.starred ? ' on' : '') + '" data-act="task:star" data-id="' + task.id + '" aria-pressed="' + (!!task.starred) + '" aria-label="' + esc(t('f.starred')) + '">' +
         (task.starred ? I.starFill : I.star) + '</button>' +
       '</div>' +
@@ -1248,18 +1427,20 @@
      ============================================================ */
   let openTaskId = null;
   let chatDraft = '';
+  let chatMentions = {};
 
   async function openTask(id) {
-    openTaskId = id;
+    openTaskId = id; chatMentions = {};
     const task = state.tasks.find((x) => x.id === id);
     if (!task) return;
     renderTaskSheet(task, true);
     subscribeChat(id);
     await loadComments(id);
+    if (canChat(task)) markRead(id);
   }
 
   function closeSheet() {
-    openTaskId = null; chatDraft = '';
+    openTaskId = null; chatDraft = ''; chatMentions = {};
     if (chatChannel) { try { sb.removeChannel(chatChannel); } catch (e) {} chatChannel = null; }
     modalRoot().innerHTML = '';
   }
@@ -1276,6 +1457,7 @@
     if (sel && sel.value !== task.status) sel.value = task.status;
     const star = sheet.querySelector('#sheet-star');
     if (star) { star.className = 'star-btn' + (task.starred ? ' on' : ''); star.innerHTML = task.starred ? I.starFill : I.star; }
+    renderChecklist(task.id);
   }
 
   function canChat(task) {
@@ -1310,8 +1492,9 @@
 
     const infoRows =
       '<div class="list mt-16">' +
-      (task.due_date ? row(I.cal, t('dueLabel'), fmtDate(task.due_date + 'T00:00:00')) : '') +
+      (task.due_date ? row(isOverdue(task) ? I.alert : I.cal, t('dueLabel'), dueLabel(task)) : '') +
       row(I.flag, t('priorityLabel'), t('prio.' + task.priority)) +
+      ((task.recurrence && task.recurrence !== 'none') ? row(I.repeat, t('recurLabel'), recurLabel(task.recurrence)) : '') +
       '</div>';
 
     const chatSection = canChat(task) ?
@@ -1319,10 +1502,15 @@
         '<div id="chat-box" class="chat">' + (withChatLoading ? chatSkeleton() : '') + '</div>') :
       ('<div class="card mt-16"><p class="muted tiny" style="margin:0">' + esc(t('chatLocked')) + '</p></div>');
 
+    const mentionables = state.members.filter((m) => m.id !== state.me.id);
     const footer = canChat(task) ?
       ('<div class="sheet-foot"><div class="chat-input grow">' +
+        (mentionables.length ? '<button class="chat-at" data-act="chat:mention" aria-label="' + esc(t('mention')) + '">' + I.at + '</button>' : '') +
         '<textarea class="textarea" id="chat-text" rows="1" placeholder="' + esc(t('chatPlaceholder')) + '">' + esc(chatDraft) + '</textarea>' +
         '<button class="btn btn-primary" data-act="chat:send" data-id="' + task.id + '" style="padding:0 14px;height:44px">' + I.send + '</button>' +
+        (mentionables.length ? '<div id="mention-pop" class="mention-pop hidden">' + mentionables.map((m) =>
+          '<button class="mention-opt" data-act="mention:add" data-id="' + m.id + '" data-name="' + esc(displayName(m)) + '">' +
+          avatar(m, 'sm') + '<span>' + esc(displayName(m)) + '</span></button>').join('') + '</div>' : '') +
         '</div></div>') : '';
 
     modalRoot().innerHTML =
@@ -1342,6 +1530,7 @@
       (task.description ? '<div class="card mt-16"><div style="white-space:pre-wrap;line-height:1.5">' + esc(task.description) + '</div></div>' : '') +
       assigneesBlock +
       infoRows +
+      checklistSectionHtml(task) +
       (creator ? '<p class="tiny muted" style="margin:12px 4px 0">' +
         esc((state.lang === 'el' ? 'Δημιουργήθηκε από ' : 'Created by ') + displayName(creator) + ' • ' + fmtDate(task.created_at)) + '</p>' : '') +
       chatSection +
@@ -1356,6 +1545,67 @@
     return '<div class="list-row"><div class="lr-ico">' + icon + '</div>' +
       '<div class="lr-main"><div class="t">' + esc(title) + '</div>' +
       (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div></div>';
+  }
+
+  /* ---------------- checklist / subtasks ---------------- */
+  function checklistItemsHtml(task) {
+    const items = subtasksFor(task.id);
+    const canTick = canChat(task) || hasFullAccess();
+    const canEdit = canManageTask(task);
+    if (!items.length) return '<p class="muted tiny" style="margin:4px 2px 0">' + esc(t('noSubtasks')) + '</p>';
+    return items.map((s) =>
+      '<div class="subt' + (s.done ? ' done' : '') + '">' +
+      '<button class="subt-check" data-act="sub:toggle" data-id="' + s.id + '" data-task="' + task.id + '"' +
+        (canTick ? '' : ' disabled') + ' aria-pressed="' + (!!s.done) + '"><span class="cbox">' + I.check + '</span></button>' +
+      '<span class="subt-title">' + esc(s.title) + '</span>' +
+      (canEdit ? '<button class="subt-del" data-act="sub:del" data-id="' + s.id + '" data-task="' + task.id + '" aria-label="' + esc(t('delete')) + '">' + I.x + '</button>' : '') +
+      '</div>').join('');
+  }
+  function checklistSectionHtml(task) {
+    const p = subtaskProgress(task.id);
+    const canEdit = canManageTask(task);
+    return '<div class="section-title spread" style="margin:18px 4px 6px"><span>' + esc(t('checklistTitle')) + '</span>' +
+      '<span class="muted tiny" id="sheet-checklist-count">' + (p.total ? p.done + '/' + p.total : '') + '</span></div>' +
+      '<div id="sheet-checklist">' + checklistItemsHtml(task) + '</div>' +
+      (canEdit ? '<div class="subt-add"><input class="input" id="subt-new" type="text" placeholder="' + esc(t('addSubtaskPlaceholder')) +
+        '" data-enter="sub:add" data-task="' + task.id + '" />' +
+        '<button class="btn btn-soft" data-act="sub:add" data-task="' + task.id + '" aria-label="' + esc(t('add')) + '">' + I.plus + '</button></div>' : '');
+  }
+  function renderChecklist(taskId) {
+    const el = $('#sheet-checklist');
+    const task = state.tasks.find((x) => x.id === taskId);
+    if (el && task) el.innerHTML = checklistItemsHtml(task);
+    const cnt = $('#sheet-checklist-count');
+    if (cnt) { const p = subtaskProgress(taskId); cnt.textContent = p.total ? p.done + '/' + p.total : ''; }
+  }
+  async function toggleSubtask(id, taskId) {
+    const list = state.subtasks[taskId] || []; const s = list.find((x) => x.id === id); if (!s) return;
+    s.done = !s.done; haptic(6); renderChecklist(taskId); renderListView();
+    try { const { error } = await sb.from('subtasks').update({ done: s.done }).eq('id', id); if (error) throw error; }
+    catch (e) { s.done = !s.done; renderChecklist(taskId); renderListView(); toast(t('genericError'), true); }
+  }
+  async function deleteSubtask(id, taskId) {
+    const list = state.subtasks[taskId] || []; const idx = list.findIndex((x) => x.id === id); if (idx < 0) return;
+    const removed = list[idx]; list.splice(idx, 1); renderChecklist(taskId); renderListView();
+    try { const { error } = await sb.from('subtasks').delete().eq('id', id); if (error) throw error; }
+    catch (e) { list.splice(idx, 0, removed); renderChecklist(taskId); toast(t('genericError'), true); }
+  }
+  async function addSubtask(taskId) {
+    const inp = $('#subt-new'); if (!inp) return;
+    const title = inp.value.trim(); if (!title) return;
+    inp.value = '';
+    const list = state.subtasks[taskId] = state.subtasks[taskId] || [];
+    const pos = list.reduce((mx, s) => Math.max(mx, s.position || 0), 0) + 1;
+    const tmp = { id: 'tmp-' + Date.now(), task_id: taskId, title: title, done: false, position: pos, created_at: new Date().toISOString() };
+    list.push(tmp); renderChecklist(taskId); renderListView(); haptic(6);
+    try {
+      const { data, error } = await sb.from('subtasks').insert({ task_id: taskId, title: title, position: pos }).select().single();
+      if (error) throw error;
+      const i = list.findIndex((x) => x.id === tmp.id); if (i >= 0) list[i] = data; renderChecklist(taskId);
+    } catch (e) {
+      const i = list.findIndex((x) => x.id === tmp.id); if (i >= 0) list.splice(i, 1);
+      renderChecklist(taskId); toast(t('genericError'), true); inp.value = title;
+    }
   }
 
   async function loadComments(taskId) {
@@ -1423,11 +1673,13 @@
     const ta = $('#chat-text'); if (!ta) return;
     const content = ta.value.trim(); if (!content) return;
     haptic(6);
-    ta.value = ''; chatDraft = ''; ta.style.height = '44px';
-    const optimistic = { id: 'tmp-' + Date.now(), task_id: taskId, user_id: state.me.id, content, created_at: new Date().toISOString() };
+    // keep only mentions whose @Name still appears in the text
+    const mentions = Object.keys(chatMentions).filter((id) => content.indexOf('@' + chatMentions[id]) >= 0);
+    ta.value = ''; chatDraft = ''; ta.style.height = '44px'; chatMentions = {};
+    const optimistic = { id: 'tmp-' + Date.now(), task_id: taskId, user_id: state.me.id, content: content, created_at: new Date().toISOString() };
     appendMessage(optimistic);
     try {
-      const { error } = await sb.from('comments').insert({ task_id: taskId, user_id: state.me.id, content });
+      const { error } = await sb.from('comments').insert({ task_id: taskId, user_id: state.me.id, content: content, mentions: mentions });
       if (error) throw error;
     } catch (e) { toast(t('genericError'), true); }
   }
@@ -1491,6 +1743,7 @@
     const task = editing ? state.tasks.find((x) => x.id === taskId) : null;
     const employees = state.members; // boss can assign to anyone in org (incl. self)
     const dueVal = task && task.due_date ? task.due_date : (prefill && prefill.due_date ? prefill.due_date : '');
+    const timeVal = task && task.due_time ? fmtTime(task.due_time) : '';
     formExtraAssignees = new Set(editing ? (state.taskAssignees[taskId] || []) : []);
     formExtraOpen = false;
     const primaryId = task && task.assigned_to ? task.assigned_to : null;
@@ -1520,6 +1773,13 @@
       '<label class="field"><span class="label">' + esc(t('dueLabel')) + '</span>' +
       '<input class="input" id="f-due" type="date" value="' + esc(dueVal) + '" /></label>' +
       '</div>' +
+      '<div class="row">' +
+      '<label class="field"><span class="label">' + esc(t('dueTimeLabel')) + '</span>' +
+      '<input class="input" id="f-due-time" type="time" value="' + esc(timeVal) + '" /></label>' +
+      '<label class="field"><span class="label">' + esc(t('recurLabel')) + '</span>' +
+      '<select class="select" id="f-recur">' + RECUR.map((r) =>
+        '<option value="' + r + '"' + ((task ? (task.recurrence || 'none') : 'none') === r ? ' selected' : '') + '>' + esc(t('recur.' + r)) + '</option>').join('') + '</select></label>' +
+      '</div>' +
       (editing ?
         '<label class="field"><span class="label">' + esc(t('statusLabel')) + '</span>' +
         '<select class="select" id="f-status">' + STATUSES.map((s) =>
@@ -1542,7 +1802,9 @@
       description: (($('#f-desc') || {}).value || '').trim() || null,
       assigned_to: primary,
       priority: ($('#f-prio') || {}).value || 'normal',
-      due_date: (($('#f-due') || {}).value || '') || null
+      due_date: (($('#f-due') || {}).value || '') || null,
+      due_time: (($('#f-due-time') || {}).value || '') || null,
+      recurrence: ($('#f-recur') || {}).value || 'none'
     };
     btnBusy(btn, true);
     try {
@@ -1592,7 +1854,9 @@
       task_assigned: { i: I.list, bg: 'var(--accent-weak)', fg: 'var(--accent)' },
       task_status:   { i: I.refresh, bg: 'var(--st-progress-bg)', fg: 'var(--st-progress-fg)' },
       new_comment:   { i: I.chat, bg: 'var(--st-done-bg)', fg: 'var(--st-done-fg)' },
-      task_updated:  { i: I.pencil, bg: 'var(--st-pending-bg)', fg: 'var(--st-pending-fg)' }
+      task_updated:  { i: I.pencil, bg: 'var(--st-pending-bg)', fg: 'var(--st-pending-fg)' },
+      mention:       { i: I.at, bg: 'var(--accent-weak)', fg: 'var(--accent)' },
+      reminder:      { i: I.alert, bg: 'var(--st-cancel-bg)', fg: 'var(--st-cancel-fg)' }
     };
     const m = map[type] || map.task_updated;
     return '<div class="n-ico" style="background:' + m.bg + ';color:' + m.fg + '">' + m.i + '</div>';
@@ -1656,9 +1920,15 @@
       '<div class="muted tiny">' + esc(me.email || '') + '</div>' +
       '<span class="chip ' + roleChipClass(me.role) + '" style="margin-top:6px">' + esc(t('role.' + me.role)) + '</span>' +
       '</div></div>' +
-      '<label class="field mt-16" style="margin-bottom:0"><span class="label">' + esc(t('nameLabel')) + '</span>' +
-      '<div class="row"><input class="input" id="set-name" type="text" value="' + esc(me.full_name || '') + '" />' +
-      '<button class="btn btn-soft" data-act="profile:save" style="flex:0 0 auto">' + esc(t('save')) + '</button></div></label>' +
+      '<label class="field mt-16"><span class="label">' + esc(t('nameLabel')) + '</span>' +
+      '<input class="input" id="set-name" type="text" value="' + esc(me.full_name || '') + '" /></label>' +
+      '<div class="row">' +
+      '<label class="field"><span class="label">' + esc(t('jobTitleLabel')) + '</span>' +
+      '<input class="input" id="set-jobtitle" type="text" value="' + esc(me.job_title || '') + '" placeholder="' + esc(t('jobTitlePlaceholder')) + '" /></label>' +
+      '<label class="field"><span class="label">' + esc(t('phoneLabel')) + '</span>' +
+      '<input class="input" id="set-phone" type="tel" value="' + esc(me.phone || '') + '" placeholder="' + esc(t('phonePlaceholder')) + '" /></label>' +
+      '</div>' +
+      '<button class="btn btn-soft btn-block" data-act="profile:save">' + esc(t('save')) + '</button>' +
       '</div>';
 
     // appearance
@@ -1689,6 +1959,8 @@
     const memberRow = (m) => {
       const isSelf = m.id === me.id;
       const editable = owner && m.role !== 'boss' && !isSelf;
+      const sub = m.job_title ? esc(m.job_title) : esc(m.email || '');
+      const phone = m.phone ? '<a class="rc-phone" href="tel:' + esc(m.phone) + '">' + I.phone + esc(m.phone) + '</a>' : '';
       const ctl = editable
         ? '<div class="member-ctl">' +
             '<select class="select sm" data-change="member:role" data-id="' + m.id + '">' +
@@ -1698,12 +1970,13 @@
             (m.role === 'employee'
               ? '<label class="member-toggle">' + switchEl('member:cancreate', m.can_create_tasks, m.id) + '<span>' + esc(t('canAddJobs')) + '</span></label>'
               : '') +
+            '<button class="btn btn-danger btn-sm member-remove" data-act="member:remove" data-id="' + m.id + '" data-name="' + esc(displayName(m)) + '">' + I.trash + esc(t('removeMember')) + '</button>' +
           '</div>'
         : '';
       return '<div class="list-row"' + (editable ? ' style="align-items:flex-start"' : '') + '>' + avatar(m) +
         '<div class="lr-main"><div class="t">' + esc(displayName(m)) +
         (isSelf ? ' <span class="chip" style="padding:2px 7px;font-size:10px">' + esc(t('youTag')) + '</span>' : '') + '</div>' +
-        '<div class="s">' + esc(m.email || '') + '</div>' + ctl + '</div>' +
+        '<div class="s">' + sub + '</div>' + phone + ctl + '</div>' +
         (editable ? '' : roleChip(m)) +
         '</div>';
     };
@@ -1756,9 +2029,21 @@
     }
 
     // account
-    html += '<div><div class="section-title">' + esc(t('secAccount')) + '</div><div class="list">' +
+    html += '<div><div class="section-title">' + esc(t('secAccount')) + '</div>' +
+      '<div class="card pad-lg">' +
+      '<label class="field"><span class="label">' + esc(t('changeEmail')) + '</span>' +
+      '<div class="row"><input class="input" id="set-email" type="email" value="' + esc(me.email || '') + '" />' +
+      '<button class="btn btn-soft" data-act="acct:email" style="flex:0 0 auto">' + esc(t('save')) + '</button></div></label>' +
+      '<label class="field" style="margin-bottom:0"><span class="label">' + esc(t('changePassword')) + '</span>' +
+      '<div class="row"><input class="input" id="set-pass" type="password" placeholder="' + esc(t('newPasswordPlaceholder')) + '" autocomplete="new-password" />' +
+      '<button class="btn btn-soft" data-act="acct:password" style="flex:0 0 auto">' + esc(t('save')) + '</button></div></label>' +
+      '<div id="acct-msg"></div>' +
+      '</div>' +
+      '<div class="list mt-8">' +
       '<div class="list-row link" data-act="signout"><div class="lr-ico">' + I.logout + '</div>' +
       '<div class="lr-main"><div class="t">' + esc(t('signOut')) + '</div><div class="s">' + esc(me.email || '') + '</div></div></div>' +
+      '<div class="list-row link" data-act="acct:delete"><div class="lr-ico" style="background:var(--st-cancel-bg);color:var(--st-cancel-fg)">' + I.trash + '</div>' +
+      '<div class="lr-main"><div class="t" style="color:var(--st-cancel-fg)">' + esc(t('deleteAccount')) + '</div><div class="s">' + esc(t('deleteAccountSub')) + '</div></div></div>' +
       '</div></div>';
 
     html += '<p class="text-c tiny muted mt-8">Boss Around · PWA</p>';
@@ -1780,10 +2065,52 @@
 
   async function saveName() {
     const name = (($('#set-name') || {}).value || '').trim();
-    state.me.full_name = name;
-    await saveProfile({ full_name: name });
+    const phone = (($('#set-phone') || {}).value || '').trim();
+    const job = (($('#set-jobtitle') || {}).value || '').trim();
+    state.me.full_name = name; state.me.phone = phone || null; state.me.job_title = job || null;
+    await saveProfile({ full_name: name, phone: phone || null, job_title: job || null });
     toast(t('savedToast'));
     renderView();
+  }
+
+  async function removeMember(uid, name) {
+    if (!confirm(t('removeMemberConfirm').replace('{name}', name || ''))) return;
+    try {
+      const { error } = await sb.rpc('remove_member', { p_user_id: uid });
+      if (error) throw error;
+      state.members = state.members.filter((m) => m.id !== uid);
+      await reloadTasks(); await reloadAssignees();
+      renderView(); toast(t('memberRemoved'));
+    } catch (e) { toast(t('genericError'), true); }
+  }
+
+  function acctMsg(h, ok) { const m = $('#acct-msg'); if (m) m.innerHTML = h ? '<div class="' + (ok ? 'ok-text' : 'error-text') + '">' + esc(h) + '</div>' : ''; }
+  async function changeEmail() {
+    const email = (($('#set-email') || {}).value || '').trim().toLowerCase();
+    if (!email || email === (state.me.email || '').toLowerCase()) return;
+    acctMsg('');
+    try { const { error } = await sb.auth.updateUser({ email: email }); if (error) throw error; acctMsg(t('emailChangeSent'), true); }
+    catch (e) { acctMsg(e.message || t('genericError')); }
+  }
+  async function changePassword() {
+    const pass = (($('#set-pass') || {}).value || '');
+    if (pass.length < 6) return acctMsg(t('passwordTooShort'));
+    acctMsg('');
+    try { const { error } = await sb.auth.updateUser({ password: pass }); if (error) throw error;
+      const i = $('#set-pass'); if (i) i.value = ''; acctMsg(t('passwordChanged'), true); }
+    catch (e) { acctMsg(e.message || t('genericError')); }
+  }
+  async function deleteMyAccount() {
+    if (isOwner()) { acctMsg(t('deleteAccountBoss')); return; }
+    if (!confirm(t('deleteAccountConfirm'))) return;
+    try {
+      const { error } = await sb.rpc('delete_my_account');
+      if (error) { if (/BOSS_MUST_TRANSFER/.test(error.message)) { acctMsg(t('deleteAccountBoss')); return; } throw error; }
+      teardownChannels();
+      try { await sb.auth.signOut(); } catch (e) {}
+      Object.assign(state, { session: null, me: null, org: null, members: [], tasks: [], notifications: [] });
+      route();
+    } catch (e) { acctMsg(e.message || t('genericError')); }
   }
   async function renameOrg() {
     const name = (($('#set-orgname') || {}).value || '').trim(); if (!name) return;
@@ -1919,6 +2246,23 @@
       }
       case 'search:clear': state.search = ''; resetTaskPaging(); renderView(); break;
       case 'task:loadmore': state.taskLimit += PAGE_SIZE; haptic(6); renderTaskList(); break;
+      case 'home:goto': {
+        haptic(6); resetTaskPaging();
+        state.statuses = []; state.starredOnly = false; state.overdueOnly = false;
+        state.dateFrom = null; state.dateTo = null;
+        if (!hasFullAccess()) state.scope = 'mine'; else { state.scope = 'all'; state.assignee = 'all'; }
+        if (val === 'overdue') state.overdueOnly = true;
+        else if (val === 'today') { const d = todayStr(); state.dateFrom = d; state.dateTo = d; }
+        else if (val === 'doneweek') state.statuses = ['completed'];
+        state.view = 'tasks'; renderApp();
+        break;
+      }
+      case 'home:member': {
+        haptic(6); resetTaskPaging();
+        state.scope = 'all'; state.assignee = id; state.statuses = []; state.overdueOnly = false; state.starredOnly = false;
+        state.dateFrom = null; state.dateTo = null; state.view = 'tasks'; renderApp();
+        break;
+      }
       case 'chat:retry': { const b = $('#chat-box'); if (b) b.innerHTML = chatSkeleton(); loadComments(id); break; }
       case 'retry': onSignedIn(); break;
       case 'group:toggle': {
@@ -1975,12 +2319,29 @@
       }
 
       case 'chat:send': sendComment(id); break;
+      case 'chat:mention': { const p = $('#mention-pop'); if (p) p.classList.toggle('hidden'); break; }
+      case 'mention:add': {
+        const name = el.getAttribute('data-name') || '';
+        chatMentions[id] = name;
+        const ta = $('#chat-text');
+        if (ta) { const sep = (ta.value && !/\s$/.test(ta.value)) ? ' ' : ''; ta.value = ta.value + sep + '@' + name + ' '; chatDraft = ta.value; ta.focus(); }
+        const p = $('#mention-pop'); if (p) p.classList.add('hidden');
+        break;
+      }
+
+      case 'sub:toggle': toggleSubtask(id, el.getAttribute('data-task')); break;
+      case 'sub:del': deleteSubtask(id, el.getAttribute('data-task')); break;
+      case 'sub:add': addSubtask(el.getAttribute('data-task')); break;
 
       case 'notif:open': openNotification(id, el.getAttribute('data-task') || null); break;
       case 'notif:readall': markAllRead(); break;
       case 'notif:perm': requestNotifPermission(); break;
 
       case 'profile:save': saveName(); break;
+      case 'member:remove': removeMember(id, el.getAttribute('data-name')); break;
+      case 'acct:email': changeEmail(); break;
+      case 'acct:password': changePassword(); break;
+      case 'acct:delete': deleteMyAccount(); break;
       case 'org:rename': renameOrg(); break;
       case 'org:leave': leaveOrg(); break;
       case 'org:delete': deleteOrg(); break;
@@ -2027,6 +2388,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { if (openTaskId) closeSheet(); else if (modalRoot().innerHTML) modalRoot().innerHTML = ''; return; }
+    if (e.key === 'Enter' && e.target && e.target.id === 'subt-new') { e.preventDefault(); addSubtask(e.target.getAttribute('data-task')); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('task')) {
       e.preventDefault(); handleTaskClick(e.target.getAttribute('data-id'));
     }
@@ -2036,7 +2398,7 @@
      BOOT
      ============================================================ */
   async function afterOrgReady() {
-    state.view = 'tasks';
+    state.view = 'home';
     setupRealtime();
     renderApp();
     // ask for notification permission opportunistically if enabled
@@ -2105,7 +2467,9 @@
       viewCalendar, applyDatePreset, openDateFilter,
       taskAssigneeIds, isAssignee, buildAssigneeMap, formExtraHtml,
       setExtraOpen: (v) => { formExtraOpen = v; },
-      hasFullAccess, isOwner, canCreateTasks, canManageTask
+      hasFullAccess, isOwner, canCreateTasks, canManageTask,
+      viewHome, subtaskProgress, subtasksFor, isOverdue, dueLabel, dueAt, fmtTime, recurLabel,
+      checklistItemsHtml, checklistSectionHtml, isUnread, unreadCount, buildSubtaskMap, todayStr
     };
   }
 
