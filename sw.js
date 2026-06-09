@@ -3,7 +3,7 @@
    deploy are picked up immediately when online. The cache is only a fallback
    for offline use. Supabase API/realtime traffic is never cached. */
 
-const CACHE = 'boss-around-v2';
+const CACHE = 'boss-around-v3';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './config.js',
   './manifest.webmanifest', './icon-192.png', './icon-512.png',

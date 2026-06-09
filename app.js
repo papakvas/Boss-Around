@@ -44,6 +44,11 @@
       tabMine: 'Δικές μου', tabAll: 'Όλες',
       'f.all': 'Όλες', 'f.pending': 'Εκκρεμείς', 'f.in_progress': 'Σε εξέλιξη',
       'f.on_hold': 'Σε αναμονή', 'f.completed': 'Ολοκληρωμένες', 'f.cancelled': 'Ακυρωμένες', 'f.starred': 'Με αστέρι',
+      'f.overdue': 'Εκπρόθεσμες',
+      searchPlaceholder: 'Αναζήτηση εργασιών…', sortLabel: 'Ταξινόμηση',
+      'sort.smart': 'Έξυπνη', 'sort.due': 'Προθεσμία', 'sort.priority': 'Προτεραιότητα', 'sort.updated': 'Πρόσφατες', 'sort.title': 'Τίτλος',
+      overdueBadge: 'Εκπρόθεσμη', loadMore: 'Περισσότερες', refreshFailed: 'Η ανανέωση απέτυχε',
+      emptySearchTitle: 'Καμία εργασία', emptySearchSub: 'Δοκίμασε διαφορετικούς όρους αναζήτησης.',
       assignedTo: 'Ανατέθηκε σε', unassigned: 'Χωρίς ανάθεση', noDue: 'Χωρίς προθεσμία',
       allAssignees: 'Όλοι οι υπεύθυνοι',
       markComplete: 'Σήμανση ως ολοκληρωμένη',
@@ -146,6 +151,11 @@
       tabMine: 'Mine', tabAll: 'All',
       'f.all': 'All', 'f.pending': 'Pending', 'f.in_progress': 'In progress',
       'f.on_hold': 'On hold', 'f.completed': 'Completed', 'f.cancelled': 'Cancelled', 'f.starred': 'Starred',
+      'f.overdue': 'Overdue',
+      searchPlaceholder: 'Search tasks…', sortLabel: 'Sort',
+      'sort.smart': 'Smart', 'sort.due': 'Due date', 'sort.priority': 'Priority', 'sort.updated': 'Recent', 'sort.title': 'Title',
+      overdueBadge: 'Overdue', loadMore: 'Show more', refreshFailed: 'Refresh failed',
+      emptySearchTitle: 'No tasks found', emptySearchSub: 'Try different search terms.',
       assignedTo: 'Assigned to', unassigned: 'Unassigned', noDue: 'No due date',
       allAssignees: 'All assignees',
       markComplete: 'Mark as completed',
@@ -214,6 +224,7 @@
 
   const STATUSES   = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'];
   const PRIORITIES = ['low', 'normal', 'high'];
+  const PAGE_SIZE = 20;
   const AVATAR_COLORS = ['#E8590C', '#2F6FED', '#1B8E4E', '#9333EA', '#D6336C', '#0CA678', '#E8A317', '#5C7CFA'];
 
   /* ---------------- state ---------------- */
@@ -221,6 +232,7 @@
     ready: false, session: null, me: null, org: null,
     members: [], tasks: [], notifications: [], invites: [], myInvites: [],
     view: 'tasks', scope: 'mine', statuses: [], starredOnly: false, assignee: 'all', collapsed: {}, armedTaskId: null,
+    search: '', sort: 'smart', overdueOnly: false, taskLimit: PAGE_SIZE, refreshing: false,
     calMonth: null, calSelected: null, dateFrom: null, dateTo: null, taskAssignees: {},
     authMode: 'signin', lang: 'el', busy: false
   };
@@ -324,6 +336,90 @@
     setTimeout(() => el.remove(), 2700);
   }
 
+  function haptic(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {} }
+  function resetTaskPaging() { state.taskLimit = PAGE_SIZE; }
+
+  // case/diacritic-insensitive contains
+  function norm(s) {
+    s = String(s == null ? '' : s).toLowerCase();
+    try { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { return s; }
+  }
+  function matchesSearch(task, q) {
+    if (!q) return true;
+    if (norm(task.title).indexOf(q) >= 0) return true;
+    if (task.description && norm(task.description).indexOf(q) >= 0) return true;
+    return taskAssigneeIds(task).some((id) => norm(displayName(profileById(id))).indexOf(q) >= 0);
+  }
+
+  /* ---------------- refresh helpers (pull-to-refresh) ---------------- */
+  async function reloadNotifications() {
+    if (!state.me) return;
+    const { data } = await sb.from('notifications').select('*').eq('user_id', state.me.id)
+      .order('created_at', { ascending: false }).limit(60);
+    if (data) { state.notifications = data; updateNavBadges(); }
+  }
+  async function reloadMembers() {
+    if (!state.me || !state.me.org_id) return;
+    const { data } = await sb.from('profiles').select('*').eq('org_id', state.me.org_id);
+    if (data) {
+      state.members = data;
+      const mine = data.find((p) => p.id === state.me.id);
+      if (mine) { state.me.role = mine.role; state.me.can_create_tasks = mine.can_create_tasks; state.me.full_name = mine.full_name; }
+    }
+  }
+  async function refreshData() {
+    if (!state.me || !state.me.org_id) return;
+    await Promise.all([reloadTasks(), reloadAssignees(), reloadNotifications(), reloadMembers()]);
+    renderView();
+  }
+
+  let ptrStartY = null, ptrPulling = false;
+  const ptrScroller = () => document.scrollingElement || document.documentElement;
+  function ptrIndicator() {
+    let el = document.getElementById('ptr');
+    if (!el) { el = document.createElement('div'); el.id = 'ptr'; el.innerHTML = '<span class="spinner"></span>'; (app() || document.body).insertBefore(el, app() ? app().firstChild : null); }
+    return el;
+  }
+  function ptrActive() {
+    return state.me && state.me.org_id && !modalRoot().innerHTML &&
+      (state.view === 'tasks' || state.view === 'calendar' || state.view === 'notif' || state.view === 'home');
+  }
+  document.addEventListener('touchstart', (e) => {
+    if (!ptrActive() || ptrScroller().scrollTop > 4) { ptrStartY = null; return; }
+    ptrStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (ptrStartY == null || state.refreshing) return;
+    const dy = e.touches[0].clientY - ptrStartY;
+    if (dy > 0 && ptrScroller().scrollTop <= 0) {
+      ptrPulling = true;
+      const ind = ptrIndicator(); const p = Math.min(dy * 0.5, 64);
+      ind.style.height = p + 'px'; ind.style.opacity = String(Math.min(p / 50, 1));
+      ind.classList.toggle('ready', dy > 64);
+    }
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!ptrPulling) { ptrStartY = null; return; }
+    const ind = document.getElementById('ptr'); const ready = ind && ind.classList.contains('ready');
+    ptrPulling = false; ptrStartY = null;
+    if (ind) ind.classList.remove('ready');
+    if (ready) doPullRefresh(); else if (ind) { ind.style.height = ''; ind.style.opacity = ''; }
+  });
+  async function doPullRefresh() {
+    if (state.refreshing) return;
+    state.refreshing = true; haptic(12);
+    const ind = ptrIndicator(); ind.classList.add('spin'); ind.style.height = '52px'; ind.style.opacity = '1';
+    try { await refreshData(); } catch (e) { toast(t('refreshFailed'), true); }
+    finally { state.refreshing = false; ind.classList.remove('spin'); ind.style.height = ''; ind.style.opacity = ''; }
+  }
+
+  /* ---------------- skeletons ---------------- */
+  function skelLine(w) { return '<span class="sk-line" style="width:' + (w || 100) + '%"></span>'; }
+  function chatSkeleton() {
+    const row = (me) => '<div class="msg' + (me ? ' me' : '') + '"><div class="bubble sk-bubble">' + skelLine(me ? 60 : 80) + '</div></div>';
+    return '<div class="chat-skel">' + row(false) + row(true) + row(false) + '</div>';
+  }
+
   /* ---------------- icons ---------------- */
   const I = {
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
@@ -353,7 +449,10 @@
     flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4h12l-1.5 4L16 12H4"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
     user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-    palette: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.2"/><circle cx="17.5" cy="10.5" r="1.2"/><circle cx="8.5" cy="7.5" r="1.2"/><circle cx="6.5" cy="12.5" r="1.2"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1 .8-1.7 1.7-1.7H17a5 5 0 0 0 5-5c0-4.4-4.5-7.8-10-7.8z"/></svg>'
+    palette: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1.2"/><circle cx="17.5" cy="10.5" r="1.2"/><circle cx="8.5" cy="7.5" r="1.2"/><circle cx="6.5" cy="12.5" r="1.2"/><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.2 0-1 .8-1.7 1.7-1.7H17a5 5 0 0 0 5-5c0-4.4-4.5-7.8-10-7.8z"/></svg>',
+    search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+    sort: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.3 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg>'
   };
   const statusDot = '<span class="ico"></span>';
 
@@ -725,9 +824,9 @@
   /* ============================================================
      MAIN APP SHELL
      ============================================================ */
-  function iconBtn(act, svg, val, extra) {
-    return '<button class="icon-btn" data-act="' + act + '"' + (val ? ' data-val="' + val + '"' : '') + '>' + svg +
-      (extra || '') + '</button>';
+  function iconBtn(act, svg, val, extra, label) {
+    return '<button class="icon-btn" data-act="' + act + '"' + (val ? ' data-val="' + val + '"' : '') +
+      (label ? ' aria-label="' + esc(label) + '"' : '') + '>' + svg + (extra || '') + '</button>';
   }
 
   function renderApp() {
@@ -738,8 +837,8 @@
     app().innerHTML =
       '<div class="app-bar">' +
       '<div class="wordmark"><span class="dot">' + I.check + '</span><span class="sub">Boss</span> <b>Around</b></div>' +
-      iconBtn('toggle-theme', isDark ? I.sun : I.moon) +
-      iconBtn('nav', I.bell, 'notif', unread ? '<span class="count">' + (unread > 9 ? '9+' : unread) + '</span>' : '') +
+      iconBtn('toggle-theme', isDark ? I.sun : I.moon, null, '', t('themeLabel')) +
+      iconBtn('nav', I.bell, 'notif', unread ? '<span class="count">' + (unread > 9 ? '9+' : unread) + '</span>' : '', t('navNotif')) +
       '</div>' +
       '<div id="view"></div>' +
       navBar(unread) +
@@ -752,10 +851,11 @@
     const item = (key, icon, label) => {
       const active = state.view === key;
       const badge = (key === 'notif' && unread) ? '<span class="nav-badge">' + (unread > 9 ? '9+' : unread) + '</span>' : '';
-      return '<button class="nav-item' + (active ? ' active' : '') + '" data-act="nav" data-val="' + key + '">' +
-        '<span class="nav-ico">' + icon + badge + '</span><span>' + esc(label) + '</span></button>';
+      return '<button class="nav-item' + (active ? ' active' : '') + '" data-act="nav" data-val="' + key + '"' +
+        (active ? ' aria-current="page"' : '') + ' aria-label="' + esc(label) + '">' +
+        '<span class="nav-ico" aria-hidden="true">' + icon + badge + '</span><span>' + esc(label) + '</span></button>';
     };
-    return '<nav class="bottom-nav">' +
+    return '<nav class="bottom-nav" aria-label="' + esc(t('navTasks')) + '">' +
       item('tasks', I.list, t('navTasks')) +
       item('calendar', I.cal, t('navCalendar')) +
       item('notif', I.bell, t('navNotif')) +
@@ -807,6 +907,7 @@
       else list = list.filter((t0) => isAssignee(t0, state.assignee));
     }
     if (state.starredOnly) list = list.filter((t0) => t0.starred);
+    if (state.overdueOnly) list = list.filter((t0) => isOverdue(t0));
     if (state.statuses.length) list = list.filter((t0) => state.statuses.indexOf(t0.status) >= 0);
     if (state.dateFrom || state.dateTo) {
       list = list.filter((t0) => {
@@ -816,43 +917,74 @@
         return true;
       });
     }
-    // sort: starred first, then overdue, then by status priority, then created
-    const order = { pending: 0, in_progress: 1, on_hold: 2, completed: 3, cancelled: 4 };
-    list.sort((a, b) =>
-      (b.starred - a.starred) ||
-      (order[a.status] - order[b.status]) ||
-      (new Date(b.created_at) - new Date(a.created_at)));
+    if (state.search.trim()) { const q = norm(state.search.trim()); list = list.filter((t0) => matchesSearch(t0, q)); }
+
+    const created = (a, b) => new Date(b.created_at) - new Date(a.created_at);
+    if (state.sort === 'due') {
+      list.sort((a, b) => {
+        if (!a.due_date && !b.due_date) return created(a, b);
+        if (!a.due_date) return 1; if (!b.due_date) return -1;
+        return a.due_date.localeCompare(b.due_date) || created(a, b);
+      });
+    } else if (state.sort === 'priority') {
+      const pr = { high: 0, normal: 1, low: 2 };
+      list.sort((a, b) => (pr[a.priority] - pr[b.priority]) || created(a, b));
+    } else if (state.sort === 'updated') {
+      list.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+    } else if (state.sort === 'title') {
+      const loc = state.lang === 'el' ? 'el-GR' : 'en-US';
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || '', loc));
+    } else {
+      // 'smart' (default): starred first, then status order, then newest
+      const order = { pending: 0, in_progress: 1, on_hold: 2, completed: 3, cancelled: 4 };
+      list.sort((a, b) => (b.starred - a.starred) || (order[a.status] - order[b.status]) || created(a, b));
+    }
     return list;
   }
 
   function viewTasks() {
-    const list = filteredTasks();
-    const statusChips = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'];
     let html = '<div class="screen">';
 
-    html += '<div class="seg" style="margin-bottom:12px">' +
-      '<button class="' + (state.scope === 'mine' ? 'active' : '') + '" data-act="scope" data-val="mine">' + esc(t('tabMine')) + '</button>' +
-      '<button class="' + (state.scope === 'all' ? 'active' : '') + '" data-act="scope" data-val="all">' + esc(t('tabAll')) + '</button>' +
+    // search + sort toolbar
+    html += '<div class="toolbar">' +
+      '<div class="search">' +
+      '<span class="search-ico" aria-hidden="true">' + I.search + '</span>' +
+      '<input class="search-input" id="task-search" type="search" data-input="search" ' +
+      'placeholder="' + esc(t('searchPlaceholder')) + '" value="' + esc(state.search) + '" aria-label="' + esc(t('searchPlaceholder')) + '" />' +
+      '<button class="search-clear" data-act="search:clear" aria-label="' + esc(t('clear')) + '"' +
+      (state.search ? '' : ' style="display:none"') + '>' + I.x + '</button>' +
+      '</div>' +
+      '<label class="sortbox"><span class="sort-ico" aria-hidden="true">' + I.sort + '</span>' +
+      '<select class="select sort-select" data-change="sort" aria-label="' + esc(t('sortLabel')) + '">' +
+      ['smart', 'due', 'priority', 'updated', 'title'].map((s) =>
+        '<option value="' + s + '"' + (state.sort === s ? ' selected' : '') + '>' + esc(t('sort.' + s)) + '</option>').join('') +
+      '</select></label>' +
       '</div>';
 
-    // multi-select filter row: "All" (clears statuses) + Starred toggle + each status
+    html += '<div class="seg" role="tablist" style="margin-bottom:12px">' +
+      '<button role="tab" aria-selected="' + (state.scope === 'mine') + '" class="' + (state.scope === 'mine' ? 'active' : '') + '" data-act="scope" data-val="mine">' + esc(t('tabMine')) + '</button>' +
+      '<button role="tab" aria-selected="' + (state.scope === 'all') + '" class="' + (state.scope === 'all' ? 'active' : '') + '" data-act="scope" data-val="all">' + esc(t('tabAll')) + '</button>' +
+      '</div>';
+
+    const statusChips = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'];
     html += '<div class="filters">';
-    html += '<button class="fchip' + (state.statuses.length === 0 ? ' active' : '') + '" data-act="filter" data-val="all">' + esc(t('f.all')) + '</button>';
-    html += '<button class="fchip star' + (state.starredOnly ? ' active' : '') + '" data-act="filter" data-val="starred">' +
+    html += '<button class="fchip' + (state.statuses.length === 0 ? ' active' : '') + '" aria-pressed="' + (state.statuses.length === 0) + '" data-act="filter" data-val="all">' + esc(t('f.all')) + '</button>';
+    html += '<button class="fchip star' + (state.starredOnly ? ' active' : '') + '" aria-pressed="' + state.starredOnly + '" data-act="filter" data-val="starred">' +
       '<span class="fchip-star">' + (state.starredOnly ? I.starFill : I.star) + '</span>' + esc(t('f.starred')) + '</button>';
+    html += '<button class="fchip overdue-chip' + (state.overdueOnly ? ' active' : '') + '" aria-pressed="' + state.overdueOnly + '" data-act="filter" data-val="overdue">' +
+      '<span class="fchip-ico">' + I.alert + '</span>' + esc(t('f.overdue')) + '</button>';
     html += statusChips.map((f) =>
-      '<button class="fchip' + (state.statuses.indexOf(f) >= 0 ? ' active' : '') + '" data-act="filter" data-val="' + f + '">' +
+      '<button class="fchip' + (state.statuses.indexOf(f) >= 0 ? ' active' : '') + '" aria-pressed="' + (state.statuses.indexOf(f) >= 0) + '" data-act="filter" data-val="' + f + '">' +
       esc(t('f.' + f)) + '</button>').join('');
     const dfActive = !!(state.dateFrom || state.dateTo);
     html += '<button class="fchip date ico-chip' + (dfActive ? ' active' : '') + '" data-act="datefilter:open">' +
       I.cal + '<span>' + esc(dfActive ? dateRangeLabel() : t('dateFilter')) + '</span></button>';
     html += '</div>';
 
-    // assignee filter — only meaningful when viewing everyone's board
     if (state.scope === 'all') {
       html += '<div style="display:flex;align-items:center;gap:10px;margin:2px 0 14px">' +
-        '<span style="color:var(--text-3);display:flex;flex:0 0 auto">' + I.users + '</span>' +
-        '<select class="select" data-change="assignee" style="flex:1">' +
+        '<span style="color:var(--text-3);display:flex;flex:0 0 auto" aria-hidden="true">' + I.users + '</span>' +
+        '<select class="select" data-change="assignee" aria-label="' + esc(t('allAssignees')) + '" style="flex:1">' +
         '<option value="all">' + esc(t('allAssignees')) + '</option>' +
         state.members.map((m) => '<option value="' + m.id + '"' + (state.assignee === m.id ? ' selected' : '') + '>' +
           esc(displayName(m)) + (m.role === 'boss' ? ' (' + t('bossTag') + ')' : '') + '</option>').join('') +
@@ -860,28 +992,34 @@
         '</select></div>';
     }
 
+    html += '<div id="task-list">' + taskListHtml() + '</div>';
+    return html + '</div>';
+  }
+
+  function taskListHtml() {
+    const list = filteredTasks();
     const scopeHasAny = state.scope === 'mine'
       ? state.tasks.some((x) => isAssignee(x, state.me.id))
       : state.tasks.length > 0;
 
     if (!list.length) {
+      if (state.search.trim()) return emptyState(I.search, t('emptySearchTitle'), t('emptySearchSub'));
       const boss = state.me.role === 'boss';
-      if (!scopeHasAny) html += emptyState(I.checks, boss ? t('emptyTasksBossTitle') : t('emptyTasksEmpTitle'),
+      if (!scopeHasAny) return emptyState(I.checks, boss ? t('emptyTasksBossTitle') : t('emptyTasksEmpTitle'),
         boss ? t('emptyTasksBossSub') : t('emptyTasksEmpSub'));
-      else html += emptyState(I.checks, t('emptyFilterTitle'), t('emptyFilterSub'));
-      return html + '</div>';
+      return emptyState(I.checks, t('emptyFilterTitle'), t('emptyFilterSub'));
     }
 
-    // always group into collapsible sections by status (category)
+    const visible = list.slice(0, state.taskLimit);
     const order = ['pending', 'in_progress', 'on_hold', 'completed', 'cancelled'];
     const groups = {};
-    list.forEach((tk) => { (groups[tk.status] = groups[tk.status] || []).push(tk); });
+    visible.forEach((tk) => { (groups[tk.status] = groups[tk.status] || []).push(tk); });
     const present = order.filter((s) => groups[s]);
-    html += present.map((s, idx) => {
+    let html = present.map((s, idx) => {
       const collapsed = !!state.collapsed[s];
       return '<div class="group">' +
         '<button class="group-head' + (idx === 0 ? ' first' : '') + (collapsed ? ' collapsed' : '') +
-          '" data-act="group:toggle" data-val="' + s + '">' +
+          '" data-act="group:toggle" data-val="' + s + '" aria-expanded="' + (!collapsed) + '">' +
           '<span class="chip ' + s + '">' + statusDot + esc(t('f.' + s)) + '</span>' +
           '<span class="g-count">' + groups[s].length + '</span>' +
           '<span class="g-chev">' + I.chevR + '</span>' +
@@ -892,8 +1030,14 @@
         '</div>';
     }).join('');
 
-    return html + '</div>';
+    const remaining = list.length - visible.length;
+    if (remaining > 0) {
+      html += '<button class="load-more" data-act="task:loadmore">' + esc(t('loadMore')) + ' (' + remaining + ')</button>';
+    }
+    return html;
   }
+
+  function renderTaskList() { const el = $('#task-list'); if (el) el.innerHTML = taskListHtml(); }
 
   function statusBar(status) {
     return { pending: 'var(--st-pending-fg)', in_progress: 'var(--st-progress-fg)', on_hold: 'var(--st-hold-fg)',
@@ -902,26 +1046,28 @@
 
   function taskCard(task, idx) {
     const showAssignee = state.scope === 'all';
+    const overdue = isOverdue(task);
     const meta = [];
+    if (overdue) meta.push('<span class="chip overdue-badge">' + I.alert + esc(t('overdueBadge')) + '</span>');
     if (showAssignee) {
       const ids = taskAssigneeIds(task);
       if (!ids.length) meta.push('<span class="mi">' + avatar(null, 'sm') + esc(t('unassigned')) + '</span>');
       else if (ids.length === 1) { const p = profileById(ids[0]); meta.push('<span class="mi">' + avatar(p, 'sm') + esc(displayName(p)) + '</span>'); }
       else meta.push('<span class="mi">' + avatarStack(ids) + '</span>');
     }
-    if (task.due_date) meta.push('<span class="mi' + (isOverdue(task) ? ' overdue' : '') + '">' + I.cal + esc(fmtDueShort(task.due_date)) + '</span>');
+    if (task.due_date) meta.push('<span class="mi' + (overdue ? ' overdue' : '') + '">' + I.cal + esc(fmtDueShort(task.due_date)) + '</span>');
     if (task.priority === 'high') meta.push('<span class="chip prio-high">' + I.flag + esc(t('prio.high')) + '</span>');
 
     const armed = state.armedTaskId === task.id;
-    return '<div class="card task' + (task.status === 'completed' ? ' done' : '') + (armed ? ' armed' : '') +
+    return '<div class="card task' + (task.status === 'completed' ? ' done' : '') + (armed ? ' armed' : '') + (overdue ? ' is-overdue' : '') +
       '" style="--bar:' + statusBar(task.status) + ';animation-delay:' + Math.min(idx * 35, 350) + 'ms"' +
-      ' data-act="task:click" data-id="' + task.id + '">' +
+      ' role="button" tabindex="0" aria-label="' + esc(task.title) + '" data-act="task:click" data-id="' + task.id + '">' +
       '<button class="t-check" data-act="task:check" data-id="' + task.id + '" aria-label="' + esc(t('markComplete')) + '">' +
         '<span class="cbox">' + I.check + '</span></button>' +
       '<div class="t-main">' +
       '<div class="spread" style="align-items:flex-start;gap:8px">' +
       '<div class="t-title">' + esc(task.title) + '</div>' +
-      '<button class="star-btn' + (task.starred ? ' on' : '') + '" data-act="task:star" data-id="' + task.id + '" aria-label="star">' +
+      '<button class="star-btn' + (task.starred ? ' on' : '') + '" data-act="task:star" data-id="' + task.id + '" aria-pressed="' + (!!task.starred) + '" aria-label="' + esc(t('f.starred')) + '">' +
         (task.starred ? I.starFill : I.star) + '</button>' +
       '</div>' +
       (task.description ? '<div class="t-desc">' + esc(task.description) + '</div>' : '') +
@@ -950,7 +1096,7 @@
     const task = state.tasks.find((x) => x.id === id);
     if (!task) return;
     const next = task.status === 'completed' ? 'pending' : 'completed';
-    if (next === 'completed') state.armedTaskId = null;
+    if (next === 'completed') { state.armedTaskId = null; haptic(12); }
     setStatus(id, next);
   }
 
@@ -992,7 +1138,7 @@
     if (val === 'today') { const d = todayISO(); state.dateFrom = d; state.dateTo = d; }
     else if (val === 'week') { const s = startOfWeekMon(now); state.dateFrom = isoOf(s); state.dateTo = isoOf(addDays(s, 6)); }
     else if (val === 'month') { state.dateFrom = isoOf(startOfMonth(now)); state.dateTo = isoOf(new Date(now.getFullYear(), now.getMonth() + 1, 0)); }
-    modalRoot().innerHTML = ''; state.armedTaskId = null; renderView();
+    modalRoot().innerHTML = ''; state.armedTaskId = null; resetTaskPaging(); renderView();
   }
 
   function openDateFilter() {
@@ -1170,7 +1316,7 @@
 
     const chatSection = canChat(task) ?
       ('<div class="section-title">' + esc(t('chatTitle')) + '</div>' +
-        '<div id="chat-box" class="chat">' + (withChatLoading ? '<div class="chat-empty"><div class="spinner" style="margin:0 auto"></div></div>' : '') + '</div>') :
+        '<div id="chat-box" class="chat">' + (withChatLoading ? chatSkeleton() : '') + '</div>') :
       ('<div class="card mt-16"><p class="muted tiny" style="margin:0">' + esc(t('chatLocked')) + '</p></div>');
 
     const footer = canChat(task) ?
@@ -1186,7 +1332,7 @@
       '<h2>' + esc(task.title) + '</h2>' +
       '<button class="star-btn' + (task.starred ? ' on' : '') + '" id="sheet-star" data-act="task:star" data-id="' + task.id + '">' +
         (task.starred ? I.starFill : I.star) + '</button>' +
-      (canManageTask(task) ? iconBtn('task:edit', I.pencil, task.id) : '') +
+      (canManageTask(task) ? iconBtn('task:edit', I.pencil, task.id, '', t('editTaskTitle')) : '') +
       '</div>' +
       '<div class="sheet-body">' +
       '<div class="spread" style="align-items:flex-start"><div class="grow">' +
@@ -1216,7 +1362,8 @@
     const { data, error } = await sb.from('comments').select('*').eq('task_id', taskId).order('created_at', { ascending: true });
     if (openTaskId !== taskId) return;
     const box = $('#chat-box'); if (!box) return;
-    if (error) { box.innerHTML = '<div class="chat-empty">' + esc(t('genericError')) + '</div>'; return; }
+    if (error) { box.innerHTML = '<div class="chat-empty">' + esc(t('genericError')) +
+      ' <button class="btn btn-soft btn-sm" data-act="chat:retry" data-id="' + taskId + '" style="margin-top:8px">' + esc(t('retry')) + '</button></div>'; return; }
     renderChat(data || []);
   }
 
@@ -1275,6 +1422,7 @@
   async function sendComment(taskId) {
     const ta = $('#chat-text'); if (!ta) return;
     const content = ta.value.trim(); if (!content) return;
+    haptic(6);
     ta.value = ''; chatDraft = ''; ta.style.height = '44px';
     const optimistic = { id: 'tmp-' + Date.now(), task_id: taskId, user_id: state.me.id, content, created_at: new Date().toISOString() };
     appendMessage(optimistic);
@@ -1287,7 +1435,7 @@
   /* ---------------- task mutations ---------------- */
   async function toggleStar(id) {
     const task = state.tasks.find((x) => x.id === id); if (!task) return;
-    const next = !task.starred; task.starred = next;
+    const next = !task.starred; task.starred = next; haptic(8);
     renderListView();
     refreshOpenSheet();
     const star = $('.star-btn[data-id="' + id + '"]');
@@ -1754,13 +1902,14 @@
       case 'onb:join': doJoinOrg(el); break;
       case 'onb:accept': doAcceptInvite(id, el); break;
 
-      case 'nav': state.view = val; state.armedTaskId = null; renderApp(); break;
+      case 'nav': state.view = val; state.armedTaskId = null; resetTaskPaging(); haptic(6); renderApp(); break;
 
-      case 'scope': state.scope = val; state.armedTaskId = null; renderView(); break;
+      case 'scope': state.scope = val; state.armedTaskId = null; resetTaskPaging(); renderView(); break;
       case 'filter': {
-        state.armedTaskId = null;
+        state.armedTaskId = null; resetTaskPaging();
         if (val === 'all') state.statuses = [];
         else if (val === 'starred') state.starredOnly = !state.starredOnly;
+        else if (val === 'overdue') state.overdueOnly = !state.overdueOnly;
         else {
           const i = state.statuses.indexOf(val);
           if (i >= 0) state.statuses.splice(i, 1); else state.statuses.push(val);
@@ -1768,6 +1917,10 @@
         renderView();
         break;
       }
+      case 'search:clear': state.search = ''; resetTaskPaging(); renderView(); break;
+      case 'task:loadmore': state.taskLimit += PAGE_SIZE; haptic(6); renderTaskList(); break;
+      case 'chat:retry': { const b = $('#chat-box'); if (b) b.innerHTML = chatSkeleton(); loadComments(id); break; }
+      case 'retry': onSignedIn(); break;
       case 'group:toggle': {
         const collapsed = !state.collapsed[val];
         state.collapsed[val] = collapsed;
@@ -1790,11 +1943,11 @@
         let f = (($('#df-from') || {}).value) || null;
         let to = (($('#df-to') || {}).value) || null;
         if (f && to && f > to) { const tmp = f; f = to; to = tmp; }
-        state.dateFrom = f; state.dateTo = to; state.armedTaskId = null;
+        state.dateFrom = f; state.dateTo = to; state.armedTaskId = null; resetTaskPaging();
         modalRoot().innerHTML = ''; renderView();
         break;
       }
-      case 'df:clear': state.dateFrom = null; state.dateTo = null; modalRoot().innerHTML = ''; renderView(); break;
+      case 'df:clear': state.dateFrom = null; state.dateTo = null; resetTaskPaging(); modalRoot().innerHTML = ''; renderView(); break;
 
       case 'task:new': openTaskForm(null, state.view === 'calendar' ? { due_date: state.calSelected } : null); break;
       case 'task:click': handleTaskClick(id); break;
@@ -1849,7 +2002,8 @@
       case 'theme:set': setTheme(el.value); break;
       case 'lang:set': setLang(el.value); break;
       case 'task:status': setStatus(id, el.value); break;
-      case 'assignee': state.assignee = el.value; state.armedTaskId = null; renderView(); break;
+      case 'assignee': state.assignee = el.value; state.armedTaskId = null; resetTaskPaging(); renderView(); break;
+      case 'sort': state.sort = el.value; resetTaskPaging(); renderView(); break;
       case 'notify:toggle': toggleNotify(el.checked); break;
       case 'member:role': setMemberRole(id, el.value); break;
       case 'member:cancreate': setMemberCanCreate(id, el.checked); break;
@@ -1862,8 +2016,20 @@
     }
   });
 
+  document.addEventListener('input', (e) => {
+    const el = e.target.closest('[data-input]');
+    if (!el) return;
+    if (el.getAttribute('data-input') === 'search') {
+      state.search = el.value; resetTaskPaging(); renderTaskList();
+      const clr = $('.search-clear'); if (clr) clr.style.display = el.value ? '' : 'none';
+    }
+  });
+
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { if (openTaskId) closeSheet(); else if (modalRoot().innerHTML) modalRoot().innerHTML = ''; }
+    if (e.key === 'Escape') { if (openTaskId) closeSheet(); else if (modalRoot().innerHTML) modalRoot().innerHTML = ''; return; }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('task')) {
+      e.preventDefault(); handleTaskClick(e.target.getAttribute('data-id'));
+    }
   });
 
   /* ============================================================
@@ -1895,11 +2061,14 @@
     } catch (e) {
       app().innerHTML = '<div class="screen no-nav"><div class="center-wrap"><div class="card pad-lg mt-24">' +
         '<div class="error-text">' + esc(e.message || t('genericError')) + '</div>' +
-        '<button class="btn btn-primary btn-block" data-act="signout">' + esc(t('signOut')) + '</button></div></div></div>';
+        '<button class="btn btn-primary btn-block mt-8" data-act="retry">' + esc(t('retry')) + '</button>' +
+        '<button class="btn btn-block" data-act="signout">' + esc(t('signOut')) + '</button></div></div></div>';
     }
   }
 
   async function boot() {
+    const tr = document.getElementById('toast-root');
+    if (tr) { tr.setAttribute('aria-live', 'polite'); tr.setAttribute('aria-atomic', 'true'); }
     // language preference (before sign in)
     try { const l = localStorage.getItem('ba_lang'); if (l) { state.lang = l; document.documentElement.lang = l; } } catch (e) {}
 
@@ -1930,6 +2099,7 @@
       setState: (p) => Object.assign(state, p),
       renderConfigMissing, renderAuth, renderOnboarding, renderApp, renderView,
       viewTasks, viewNotifications, viewSettings, openTaskForm, renderTaskSheet, taskCard,
+      taskListHtml, renderTaskList, matchesSearch, norm, chatSkeleton,
       filteredTasks, appendMessage, msgHtml, renderChat,
       taskCheckboxShown, handleTaskClick, toggleComplete, setStatus,
       viewCalendar, applyDatePreset, openDateFilter,
